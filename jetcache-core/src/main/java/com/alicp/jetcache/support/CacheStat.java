@@ -13,17 +13,17 @@ public class CacheStat implements Serializable, Cloneable {
 
     private static final long serialVersionUID = -8802969946750554026L;
 
-    protected String cacheName;
-    protected long statStartTime;
-    protected long statEndTime;
+    protected String cacheName; // 缓存名称
+    protected long statStartTime; // 统计开始时间
+    protected long statEndTime; // 统计结束时间
 
-    protected long getCount;
-    protected long getHitCount;
-    protected long getMissCount;
-    protected long getFailCount;
-    protected long getExpireCount;
-    protected long getTimeSum;
-    protected long minGetTime = Long.MAX_VALUE;
+    protected long getCount; // 总的获取次数
+    protected long getHitCount; // 命中次数
+    protected long getMissCount; // 未命中次数
+    protected long getFailCount; // 失败次数
+    protected long getExpireCount; // 超时次数
+    protected long getTimeSum; // 总的时间
+    protected long minGetTime = Long.MAX_VALUE; // 最小时间
     protected long maxGetTime = 0;
 
     protected long putCount;

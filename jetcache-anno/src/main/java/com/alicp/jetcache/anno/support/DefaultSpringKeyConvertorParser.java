@@ -19,12 +19,15 @@ public class DefaultSpringKeyConvertorParser extends DefaultKeyConvertorParser i
 
     private ApplicationContext applicationContext;
 
+    
     @Override
     public Function<Object, Object> parseKeyConvertor(String convertor) {
+    	// 如果是自定义的key转换器，则将convertor的"bean:"截取掉
         String beanName = DefaultSpringEncoderParser.parseBeanName(convertor);
-        if (beanName == null) {
+        if (beanName == null) { // 为空表示需从本身定义的key转换器获取
             return super.parseKeyConvertor(convertor);
         } else {
+        	// 从Spring IOC容器中加载对应的KeyConvertor(需实现BiFunction)
             return (Function<Object, Object>) applicationContext.getBean(beanName);
         }
     }

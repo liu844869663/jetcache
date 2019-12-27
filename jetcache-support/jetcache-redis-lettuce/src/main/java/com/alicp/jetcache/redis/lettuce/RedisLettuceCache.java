@@ -88,24 +88,32 @@ public class RedisLettuceCache<K, V> extends AbstractExternalCache<K, V> {
         cr.setTimeout(d);
     }
 
+    /**
+     * 将value放入redis中
+     */
     @Override
     protected CacheResult do_PUT(K key, V value, long expireAfterWrite, TimeUnit timeUnit) {
         try {
+        	// 将value封装成CacheValueHolder(真实值、最后一次访问时间、到期时间)
             CacheValueHolder<V> holder = new CacheValueHolder(value, timeUnit.toMillis(expireAfterWrite));
+            // 生成key
             byte[] newKey = buildKey(key);
+            // 创建一个RedisFuture对象，异步执行
             RedisFuture<String> future = stringAsyncCommands.psetex(newKey, timeUnit.toMillis(expireAfterWrite), valueEncoder.apply(holder));
+            // 异步执行
             CacheResult result = new CacheResult(future.handle((rt, ex) -> {
-                if (ex != null) {
+                if (ex != null) { // 过程抛出异常
                     JetCacheExecutor.defaultExecutor().execute(() -> logError("PUT", key, ex));
                     return new ResultData(ex);
-                } else {
-                    if ("OK".equals(rt)) {
+                } else { // 无异常出现
+                    if ("OK".equals(rt)) { // 保存至redis成功
                         return new ResultData(CacheResultCode.SUCCESS, null, null);
-                    } else {
+                    } else { // 保存redis失败
                         return new ResultData(CacheResultCode.FAIL, rt, null);
                     }
                 }
             }));
+            // 设置上述任务的执行超时时间
             setTimeout(result);
             return result;
         } catch (Exception ex) {
@@ -144,29 +152,36 @@ public class RedisLettuceCache<K, V> extends AbstractExternalCache<K, V> {
             return new CacheResult(ex);
         }
     }
-
+    
+    /**
+     * 从redis中获取key对应的value
+     */
     @Override
     protected CacheGetResult<V> do_GET(K key) {
         try {
+        	// redis的key值
             byte[] newKey = buildKey(key);
+            // 异步获取redis中的value
             RedisFuture<byte[]> future = stringAsyncCommands.get(newKey);
             CacheGetResult result = new CacheGetResult(future.handle((valueBytes, ex) -> {
-                if (ex != null) {
+                if (ex != null) { // 中途抛出异常
                     JetCacheExecutor.defaultExecutor().execute(() -> logError("GET", key, ex));
                     return new ResultData(ex);
                 } else {
-                    if (valueBytes != null) {
+                    if (valueBytes != null) { // 获取到返回值
+                    	// 转换成对应结果
                         CacheValueHolder<V> holder = (CacheValueHolder<V>) valueDecoder.apply(valueBytes);
-                        if (System.currentTimeMillis() >= holder.getExpireTime()) {
+                        if (System.currentTimeMillis() >= holder.getExpireTime()) { // 缓存的结果已经过期
                             return new ResultData(CacheResultCode.EXPIRED, null, null);
-                        } else {
+                        } else { // 封装数据
                             return new ResultData(CacheResultCode.SUCCESS, null, holder);
                         }
-                    } else {
+                    } else { // 远程没有缓存数据
                         return new ResultData(CacheResultCode.NOT_EXISTS, null, null);
                     }
                 }
             }));
+            // 设置异步获取结果的超时时间
             setTimeout(result);
             return result;
         } catch (Exception ex) {

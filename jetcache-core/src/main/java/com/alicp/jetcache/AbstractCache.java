@@ -148,19 +148,24 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
 
     static <K, V> V computeIfAbsentImpl(K key, Function<K, V> loader, boolean cacheNullWhenLoaderReturnNull,
                                                long expireAfterWrite, TimeUnit timeUnit, Cache<K, V> cache) {
+    	// 获取内部的Cache对象
         AbstractCache<K, V> abstractCache = CacheUtil.getAbstractCache(cache);
+        // 生成一个CacheLoader代理对象用于加载方法
         CacheLoader<K, V> newLoader = CacheUtil.createProxyLoader(cache, loader, abstractCache::notify);
         CacheGetResult<V> r;
-        if (cache instanceof RefreshCache) {
+        if (cache instanceof RefreshCache) { // 需要刷新
+        	// 转换成RefreshCache类型
             RefreshCache<K, V> refreshCache = ((RefreshCache<K, V>) cache);
+            // 从缓存中获取结果
             r = refreshCache.GET(key);
+            // 添加或者更新对象的刷新缓存线程任务
             refreshCache.addOrUpdateRefreshTask(key, newLoader);
         } else {
             r = cache.GET(key);
         }
-        if (r.isSuccess()) {
+        if (r.isSuccess()) { // 成功获取到缓存结果
             return r.getValue();
-        } else {
+        } else { // 无缓存
             Consumer<V> cacheUpdater = (loadedValue) -> {
                 if(needUpdate(loadedValue, cacheNullWhenLoaderReturnNull, newLoader)) {
                     if (timeUnit != null) {
@@ -172,10 +177,13 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
             };
 
             V loadedValue;
-            if (cache.config().isCachePenetrationProtect()) {
+            if (cache.config().isCachePenetrationProtect()) { // 有@CachePenetrationProtect注解
+            	// 一个JVM只允许一个线程执行
                 loadedValue = synchronizedLoad(cache.config(), abstractCache, key, newLoader, cacheUpdater);
             } else {
+            	// 执行方法
                 loadedValue = newLoader.apply(key);
+                // 将新的结果异步缓存
                 cacheUpdater.accept(loadedValue);
             }
 

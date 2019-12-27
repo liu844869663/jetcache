@@ -49,53 +49,57 @@ public class DefaultCacheMonitor implements CacheMonitor {
 
     @Override
     public synchronized void afterOperation(CacheEvent event) {
-        if (event instanceof CacheGetEvent) {
+        if (event instanceof CacheGetEvent) { // get 从缓存中获取
             CacheGetEvent e = (CacheGetEvent) event;
             afterGet(e.getMillis(), e.getKey(), e.getResult());
-        } else if (event instanceof CachePutEvent) {
+        } else if (event instanceof CachePutEvent) { // put 放入缓存
             CachePutEvent e = (CachePutEvent) event;
             afterPut(e.getMillis(), e.getKey(), e.getValue(), e.getResult());
-        } else if (event instanceof CacheRemoveEvent) {
+        } else if (event instanceof CacheRemoveEvent) { // remove 从缓存中删除
             CacheRemoveEvent e = (CacheRemoveEvent) event;
             afterRemove(e.getMillis(), e.getKey(), e.getResult());
-        } else if (event instanceof CacheLoadEvent) {
+        } else if (event instanceof CacheLoadEvent) { // load 执行方法
             CacheLoadEvent e = (CacheLoadEvent) event;
             afterLoad(e.getMillis(), e.getKey(), e.getLoadedValue(), e.isSuccess());
-        } else if (event instanceof CacheGetAllEvent) {
+        } else if (event instanceof CacheGetAllEvent) { // get all
             CacheGetAllEvent e = (CacheGetAllEvent) event;
             afterGetAll(e.getMillis(), e.getKeys(), e.getResult());
-        } else if (event instanceof CacheLoadAllEvent) {
+        } else if (event instanceof CacheLoadAllEvent) { // load all
             CacheLoadAllEvent e = (CacheLoadAllEvent) event;
             afterLoadAll(e.getMillis(), e.getKeys(), e.getLoadedValue(), e.isSuccess());
-        } else if (event instanceof CachePutAllEvent) {
+        } else if (event instanceof CachePutAllEvent) { // put all
             CachePutAllEvent e = (CachePutAllEvent) event;
             afterPutAll(e.getMillis(), e.getMap(), e.getResult());
-        } else if (event instanceof CacheRemoveAllEvent) {
+        } else if (event instanceof CacheRemoveAllEvent) { // remove all
             CacheRemoveAllEvent e = (CacheRemoveAllEvent) event;
             afterRemoveAll(e.getMillis(), e.getKeys(), e.getResult());
         }
     }
 
     private void afterGet(long millis, Object key, CacheGetResult result) {
+    	// 最小获取时间
         cacheStat.minGetTime = Math.min(cacheStat.minGetTime, millis);
+        // 最大获取时间
         cacheStat.maxGetTime = Math.max(cacheStat.maxGetTime, millis);
+        // 总的获取时间
         cacheStat.getTimeSum += millis;
+        // 获取次数
         cacheStat.getCount++;
         parseSingleGet(result);
     }
 
     private void parseSingleGet(CacheGetResult result) {
         switch (result.getResultCode()) {
-            case SUCCESS:
+            case SUCCESS: // 命中
                 cacheStat.getHitCount++;
                 break;
-            case NOT_EXISTS:
+            case NOT_EXISTS: // 为命中
                 cacheStat.getMissCount++;
                 break;
-            case EXPIRED:
+            case EXPIRED: // 已过期
                 cacheStat.getExpireCount++;
                 break;
-            case FAIL:
+            case FAIL: // 失败
                 cacheStat.getFailCount++;
                 break;
             default:
@@ -104,9 +108,13 @@ public class DefaultCacheMonitor implements CacheMonitor {
     }
 
     private void afterPut(long millis, Object key, Object value, CacheResult result) {
+    	// 最小放入时间
         cacheStat.minPutTime = Math.min(cacheStat.minPutTime, millis);
+        // 最大放入时间
         cacheStat.maxPutTime = Math.max(cacheStat.maxPutTime, millis);
+        // 总的放入时间
         cacheStat.putTimeSum += millis;
+        // 总的放入次数
         cacheStat.putCount++;
         switch (result.getResultCode()) {
             case SUCCESS:

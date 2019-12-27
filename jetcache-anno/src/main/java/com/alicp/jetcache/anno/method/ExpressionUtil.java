@@ -56,19 +56,23 @@ class ExpressionUtil {
     }
 
     public static Object evalKey(CacheInvokeContext context, CacheAnnoConfig cac) {
+    	// 获取注解中定义的key
         String keyScript = cac.getKey();
         try {
             if (cac.getKeyEvaluator() == null) {
-                if (CacheConsts.isUndefined(keyScript)) {
+                if (CacheConsts.isUndefined(keyScript)) { // key没有定义
                     cac.setKeyEvaluator(o -> {
                         CacheInvokeContext c = (CacheInvokeContext) o;
+                        // 获取方法的入参
                         return c.getArgs() == null ? "_$JETCACHE_NULL_KEY$_" : c.getArgs();
                     });
-                } else {
+                } else { // 添加前缀
+                	// 如果key使用了SpEL表达式则进行解析
                     ExpressionEvaluator e = new ExpressionEvaluator(keyScript, cac.getDefineMethod());
                     cac.setKeyEvaluator((o) -> e.apply(o));
                 }
             }
+            // 执行上述方法
             return cac.getKeyEvaluator().apply(context);
         } catch (Exception e) {
             logger.error("error occurs when eval key \"" + keyScript + "\" in " + context.getMethod() + ":" + e.getMessage(), e);

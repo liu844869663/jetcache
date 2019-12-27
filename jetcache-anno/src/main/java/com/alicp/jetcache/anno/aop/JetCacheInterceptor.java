@@ -36,6 +36,7 @@ public class JetCacheInterceptor implements MethodInterceptor, ApplicationContex
         this.applicationContext = applicationContext;
     }
 
+    // 有@Cached注解的方法会进入这里
     @Override
     public Object invoke(final MethodInvocation invocation) throws Throwable {
         if (configProvider == null) {
@@ -48,11 +49,16 @@ public class JetCacheInterceptor implements MethodInterceptor, ApplicationContex
             return invocation.proceed();
         }
 
+        // 获取被拦截的方法
         Method method = invocation.getMethod();
+        // 获取被拦截的对象
         Object obj = invocation.getThis();
         CacheInvokeConfig cac = null;
         if (obj != null) {
+        	// 获取改方法的Key(方法所在类名+方法名+(参数类型)+方法返回类型+_被拦截的类名)
             String key = CachePointcut.getKey(method, obj.getClass());
+            // 获取该方法的注解详情(cachedAnnoConfig、invalidateAnnoConfig、updateAnnoConfig、enableCacheContext),
+            // 其中cachedAnnoConfig包含刷新缓存的配置，这些信息被封装成了CacheInvokeConfig
             cac  = cacheConfigMap.getByMethodInfo(key);
         }
 
@@ -70,13 +76,15 @@ public class JetCacheInterceptor implements MethodInterceptor, ApplicationContex
             return invocation.proceed();
         }
 
+        // 创建一个上下文对象，并生成一个函数，入参为CacheInvokeContext和cachedAnnoConfig，目的是获取对应的Cache对象
         CacheInvokeContext context = configProvider.getCacheContext().createCacheInvokeContext(cacheConfigMap);
-        context.setTargetObject(invocation.getThis());
-        context.setInvoker(invocation::proceed);
-        context.setMethod(method);
-        context.setArgs(invocation.getArguments());
-        context.setCacheInvokeConfig(cac);
-        context.setHiddenPackages(globalCacheConfig.getHiddenPackages());
+        context.setTargetObject(invocation.getThis()); // 被拦截的对象
+        context.setInvoker(invocation::proceed); // 拦截器
+        context.setMethod(method); // 被拦截的方法
+        context.setArgs(invocation.getArguments()); // 入参
+        context.setCacheInvokeConfig(cac); // 方法的注解信息
+        context.setHiddenPackages(globalCacheConfig.getHiddenPackages()); // 需要隐藏的包名
+        // 继续往下执行
         return CacheHandler.invoke(context);
     }
 
