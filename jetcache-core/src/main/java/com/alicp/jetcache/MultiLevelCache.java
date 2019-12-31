@@ -75,6 +75,7 @@ public class MultiLevelCache<K, V> extends AbstractCache<K, V> {
 
     @Override
     protected CacheGetResult<V> do_GET(K key) {
+    	// 其中可以为两个Cache，一个为远程的，一个为本地的
         for (int i = 0; i < caches.length; i++) {
             Cache cache = caches[i];
             CacheGetResult result = cache.GET(key);
