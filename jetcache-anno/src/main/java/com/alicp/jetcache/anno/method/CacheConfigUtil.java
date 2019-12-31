@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class CacheConfigUtil {
     private static CachedAnnoConfig parseCached(Method m) {
+    	// @Cached注解的解析
         Cached anno = m.getAnnotation(Cached.class);
         if (anno == null) {
             return null;
@@ -43,12 +44,15 @@ public class CacheConfigUtil {
         cc.setKey(anno.key());
         cc.setDefineMethod(m);
 
+        // @CacheRefresh注解的解析
         CacheRefresh cacheRefresh = m.getAnnotation(CacheRefresh.class);
         if (cacheRefresh != null) {
+        	// 将注解转换成RefreshPolicy
             RefreshPolicy policy = parseRefreshPolicy(cacheRefresh);
             cc.setRefreshPolicy(policy);
         }
 
+        // @CachePenetrationProtect注解的解析
         CachePenetrationProtect protectAnno = m.getAnnotation(CachePenetrationProtect.class);
         if (protectAnno != null) {
             PenetrationProtectConfig protectConfig = parsePenetrationProtectConfig(protectAnno);
@@ -144,27 +148,34 @@ public class CacheConfigUtil {
 
     public static boolean parse(CacheInvokeConfig cac, Method method) {
         boolean hasAnnotation = false;
+        // 获取方法的@Cached、@CacheRefresh和@CachePenetrationProtect注解信息
+        // 必须要有@Cached注解
         CachedAnnoConfig cachedConfig = parseCached(method);
         if (cachedConfig != null) {
             cac.setCachedAnnoConfig(cachedConfig);
+            // 有@Cached注解
             hasAnnotation = true;
         }
+        // 是否有@EnableCache注解
         boolean enable = parseEnableCache(method);
         if (enable) {
             cac.setEnableCacheContext(true);
             hasAnnotation = true;
         }
+        // 解析@CacheInvalidate和@CacheInvalidateContainer注解
         List<CacheInvalidateAnnoConfig> invalidateAnnoConfigs = parseCacheInvalidates(method);
         if (invalidateAnnoConfigs != null) {
             cac.setInvalidateAnnoConfigs(invalidateAnnoConfigs);
             hasAnnotation = true;
         }
+        // 解析@CacheUpdate注解
         CacheUpdateAnnoConfig updateAnnoConfig = parseCacheUpdate(method);
         if (updateAnnoConfig != null) {
             cac.setUpdateAnnoConfig(updateAnnoConfig);
             hasAnnotation = true;
         }
 
+        // 如果存在@Cached 和 @CacheInvalidate 或者 @CacheUpdate则抛出异常
         if (cachedConfig != null && (invalidateAnnoConfigs != null || updateAnnoConfig != null)) {
             throw new CacheConfigException("@Cached can't coexists with @CacheInvalidate or @CacheUpdate: " + method);
         }

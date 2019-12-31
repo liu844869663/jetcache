@@ -43,9 +43,13 @@ public class JetCacheProxyConfiguration implements ImportAware, ApplicationConte
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public CacheAdvisor jetcacheAdvisor(JetCacheInterceptor jetCacheInterceptor) {
         CacheAdvisor advisor = new CacheAdvisor();
+        // bean的名称：jetcache2.internalCacheAdvisor
         advisor.setAdviceBeanName(CacheAdvisor.CACHE_ADVISOR_BEAN_NAME);
+        // 设置缓存拦截器为JetCacheInterceptor
         advisor.setAdvice(jetCacheInterceptor);
+        // 设置需要扫描的包
         advisor.setBasePackages(this.enableMethodCache.getStringArray("basePackages"));
+        // 设置优先级，默认Integer的最大值
         advisor.setOrder(this.enableMethodCache.<Integer>getNumber("order"));
         return advisor;
     }
