@@ -46,9 +46,11 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
                 throw new CacheConfigException("slaves not config");
             }
             if (config.getSlaveReadWeights() == null) {
+                // 初始化选择 redis slave 的默认权重
                 initDefaultWeights(config);
             } else if (config.getSlaveReadWeights().length != config.getJedisSlavePools().length) {
                 logger.error("length of slaveReadWeights and jedisSlavePools not equals, using default weights");
+                // 初始化选择 redis slave 的默认权重
                 initDefaultWeights(config);
             }
         }
@@ -60,6 +62,7 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
     private void initDefaultWeights(RedisCacheConfig<K, V> config) {
         int len = config.getJedisSlavePools().length;
         int[] weights = new int[len];
+        // 每个权重值设置为100
         Arrays.fill(weights, 100);
         config.setSlaveReadWeights(weights);
     }
@@ -77,6 +80,11 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
         throw new IllegalArgumentException(clazz.getName());
     }
 
+    /**
+     * 获取一个连接池
+     *
+     * @return 连接池
+     */
     Pool<Jedis> getReadPool() {
         if (!config.isReadFromSlave()) {
             return config.getJedisPool();
@@ -104,16 +112,19 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected CacheGetResult<V> do_GET(K key) {
-        try (Jedis jedis = getReadPool().getResource()) {
+        try (Jedis jedis = getReadPool().getResource()) { // 先从连接池中获取一个连接
+            // 转换 Key
             byte[] newKey = buildKey(key);
+            // 执行 get 命令
             byte[] bytes = jedis.get(newKey);
             if (bytes != null) {
                 CacheValueHolder<V> holder = (CacheValueHolder<V>) valueDecoder.apply(bytes);
                 if (System.currentTimeMillis() >= holder.getExpireTime()) {
+                    // 缓存数据已过期
                     return CacheGetResult.EXPIRED_WITHOUT_MSG;
                 }
                 return new CacheGetResult(CacheResultCode.SUCCESS, null, holder);
-            } else {
+            } else { // 无缓存数据
                 return CacheGetResult.NOT_EXISTS_WITHOUT_MSG;
             }
         } catch (Exception ex) {
@@ -124,12 +135,13 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected MultiGetResult<K, V> do_GET_ALL(Set<? extends K> keys) {
-        try (Jedis jedis = getReadPool().getResource()) {
+        try (Jedis jedis = getReadPool().getResource()) { // 先从连接池中获取一个连接
             ArrayList<K> keyList = new ArrayList<K>(keys);
+            // 依次转换 Key
             byte[][] newKeys = keyList.stream().map((k) -> buildKey(k)).toArray(byte[][]::new);
-
             Map<K, CacheGetResult<V>> resultMap = new HashMap<>();
             if (newKeys.length > 0) {
+                // 执行 mget 命令
                 List mgetResults = jedis.mget(newKeys);
                 for (int i = 0; i < mgetResults.size(); i++) {
                     Object value = mgetResults.get(i);
@@ -157,9 +169,10 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected CacheResult do_PUT(K key, V value, long expireAfterWrite, TimeUnit timeUnit) {
-        try (Jedis jedis = config.getJedisPool().getResource()) {
+        try (Jedis jedis = config.getJedisPool().getResource()) { // 先从连接池中获取一个连接
             CacheValueHolder<V> holder = new CacheValueHolder(value, timeUnit.toMillis(expireAfterWrite));
             byte[] newKey = buildKey(key);
+            // 执行 psetex 命令
             String rt = jedis.psetex(newKey, timeUnit.toMillis(expireAfterWrite), valueEncoder.apply(holder));
             if ("OK".equals(rt)) {
                 return CacheResult.SUCCESS_WITHOUT_MSG;
@@ -174,12 +187,13 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected CacheResult do_PUT_ALL(Map<? extends K, ? extends V> map, long expireAfterWrite, TimeUnit timeUnit) {
-        try (Jedis jedis = config.getJedisPool().getResource()) {
+        try (Jedis jedis = config.getJedisPool().getResource()) { // 先从连接池中获取一个连接
             int failCount = 0;
             List<Response<String>> responses = new ArrayList<>();
             Pipeline p = jedis.pipelined();
             for (Map.Entry<? extends K, ? extends V> en : map.entrySet()) {
                 CacheValueHolder<V> holder = new CacheValueHolder(en.getValue(), timeUnit.toMillis(expireAfterWrite));
+                // 执行 psetex 命令
                 Response<String> resp = p.psetex(buildKey(en.getKey()), timeUnit.toMillis(expireAfterWrite), valueEncoder.apply(holder));
                 responses.add(resp);
             }
@@ -203,7 +217,8 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
     }
 
     private CacheResult REMOVE_impl(Object key, byte[] newKey) {
-        try (Jedis jedis = config.getJedisPool().getResource()) {
+        try (Jedis jedis = config.getJedisPool().getResource()) {  // 先从连接池中获取一个连接
+            // 执行 del 命令
             Long rt = jedis.del(newKey);
             if (rt == null) {
                 return CacheResult.FAIL_WITHOUT_MSG;
@@ -222,8 +237,9 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected CacheResult do_REMOVE_ALL(Set<? extends K> keys) {
-        try (Jedis jedis = config.getJedisPool().getResource()) {
+        try (Jedis jedis = config.getJedisPool().getResource()) {  // 先从连接池中获取一个连接
             byte[][] newKeys = keys.stream().map((k) -> buildKey(k)).toArray((len) -> new byte[keys.size()][]);
+            // 执行 del 命令
             jedis.del(newKeys);
             return CacheResult.SUCCESS_WITHOUT_MSG;
         } catch (Exception ex) {
@@ -234,12 +250,11 @@ public class RedisCache<K, V> extends AbstractExternalCache<K, V> {
 
     @Override
     protected CacheResult do_PUT_IF_ABSENT(K key, V value, long expireAfterWrite, TimeUnit timeUnit) {
-        try (Jedis jedis = config.getJedisPool().getResource()) {
+        try (Jedis jedis = config.getJedisPool().getResource()) {  // 先从连接池中获取一个连接
             CacheValueHolder<V> holder = new CacheValueHolder(value, timeUnit.toMillis(expireAfterWrite));
             byte[] newKey = buildKey(key);
             SetParams params = new SetParams();
-            params.nx()
-                    .px(timeUnit.toMillis(expireAfterWrite));
+            params.nx().px(timeUnit.toMillis(expireAfterWrite));
             String rt = jedis.set(newKey, valueEncoder.apply(holder), params);
             if ("OK".equals(rt)) {
                 return CacheResult.SUCCESS_WITHOUT_MSG;

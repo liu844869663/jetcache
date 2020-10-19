@@ -21,8 +21,15 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class CacheConfigUtil {
+
+    /**
+     * 解析方法的 @Cached @CacheRefresh @CachePenetrationProtect 注解信息
+     *
+     * @param m 方法对象
+     * @return 缓存配置信息
+     */
     private static CachedAnnoConfig parseCached(Method m) {
-    	// @Cached注解的解析
+    	// @Cached 注解的解析
         Cached anno = m.getAnnotation(Cached.class);
         if (anno == null) {
             return null;
@@ -44,15 +51,14 @@ public class CacheConfigUtil {
         cc.setKey(anno.key());
         cc.setDefineMethod(m);
 
-        // @CacheRefresh注解的解析
+        // @CacheRefresh 注解的解析
         CacheRefresh cacheRefresh = m.getAnnotation(CacheRefresh.class);
         if (cacheRefresh != null) {
-        	// 将注解转换成RefreshPolicy
             RefreshPolicy policy = parseRefreshPolicy(cacheRefresh);
             cc.setRefreshPolicy(policy);
         }
 
-        // @CachePenetrationProtect注解的解析
+        // @CachePenetrationProtect 注解的解析
         CachePenetrationProtect protectAnno = m.getAnnotation(CachePenetrationProtect.class);
         if (protectAnno != null) {
             PenetrationProtectConfig protectConfig = parsePenetrationProtectConfig(protectAnno);
@@ -62,36 +68,61 @@ public class CacheConfigUtil {
         return cc;
     }
 
+    /**
+     * 解析 @CachePenetrationProtect 注解
+     *
+     * @param protectAnno 注解
+     * @return 缓存访问未命中保护策略信息
+     */
     public static PenetrationProtectConfig parsePenetrationProtectConfig(CachePenetrationProtect protectAnno) {
         PenetrationProtectConfig protectConfig = new PenetrationProtectConfig();
+        // 是否开启
         protectConfig.setPenetrationProtect(protectAnno.value());
         if (!CacheConsts.isUndefined(protectAnno.timeout())) {
+            // 其他线程等待的超时时间
             long timeout = protectAnno.timeUnit().toMillis(protectAnno.timeout());
             protectConfig.setPenetrationProtectTimeout(Duration.ofMillis(timeout));
         }
         return protectConfig;
     }
 
+    /**
+     * 解析 @CacheRefresh 注解
+     *
+     * @param cacheRefresh 注解
+     * @return 刷新缓存策略信息
+     */
     public static RefreshPolicy parseRefreshPolicy(CacheRefresh cacheRefresh) {
         RefreshPolicy policy = new RefreshPolicy();
+        // 时间单位
         TimeUnit t = cacheRefresh.timeUnit();
+        // 刷新策略
         policy.setRefreshMillis(t.toMillis(cacheRefresh.refresh()));
         if (!CacheConsts.isUndefined(cacheRefresh.stopRefreshAfterLastAccess())) {
+            // 停止刷新策略
             policy.setStopRefreshAfterLastAccessMillis(t.toMillis(cacheRefresh.stopRefreshAfterLastAccess()));
         }
         if (!CacheConsts.isUndefined(cacheRefresh.refreshLockTimeout())) {
+            // 刷新时的占有锁的超时时间
             policy.setRefreshLockTimeoutMillis(t.toMillis(cacheRefresh.refreshLockTimeout()));
         }
         return policy;
     }
 
+    /**
+     * 解析 @CacheInvalidate 注解
+     *
+     * @param m 方法对象
+     * @return 缓存失效策略集合
+     */
     public static List<CacheInvalidateAnnoConfig> parseCacheInvalidates(Method m) {
         List<CacheInvalidateAnnoConfig> annoList = null;
+        // @CacheInvalidate 注解的解析
         CacheInvalidate ci = m.getAnnotation(CacheInvalidate.class);
         if (ci != null) {
             annoList = new ArrayList<>(1);
             annoList.add(createCacheInvalidateAnnoConfig(ci, m));
-        } else {
+        } else { // @CacheInvalidate 数组注解的解析
             CacheInvalidateContainer cic = m.getAnnotation(CacheInvalidateContainer.class);
             if (cic != null) {
                 CacheInvalidate[] cacheInvalidates = cic.value();
@@ -103,6 +134,7 @@ public class CacheConfigUtil {
         }
         return annoList;
     }
+
 
     private static CacheInvalidateAnnoConfig createCacheInvalidateAnnoConfig(CacheInvalidate anno, Method m) {
         CacheInvalidateAnnoConfig cc = new CacheInvalidateAnnoConfig();
@@ -118,6 +150,12 @@ public class CacheConfigUtil {
         return cc;
     }
 
+    /**
+     * 解析 @CacheUpdate 注解
+     *
+     * @param m 方法对象
+     * @return 缓存更新配置
+     */
     private static CacheUpdateAnnoConfig parseCacheUpdate(Method m) {
         CacheUpdate anno = m.getAnnotation(CacheUpdate.class);
         if (anno == null) {
@@ -148,34 +186,33 @@ public class CacheConfigUtil {
 
     public static boolean parse(CacheInvokeConfig cac, Method method) {
         boolean hasAnnotation = false;
-        // 获取方法的@Cached、@CacheRefresh和@CachePenetrationProtect注解信息
-        // 必须要有@Cached注解
+        // 解析方法的缓存注解信息
         CachedAnnoConfig cachedConfig = parseCached(method);
         if (cachedConfig != null) {
             cac.setCachedAnnoConfig(cachedConfig);
-            // 有@Cached注解
+            // 有缓存的相关注解（@Cached @CacheRefresh @CachePenetrationProtect）
             hasAnnotation = true;
         }
-        // 是否有@EnableCache注解
+        // 是否有 @EnableCache 注解
         boolean enable = parseEnableCache(method);
         if (enable) {
             cac.setEnableCacheContext(true);
             hasAnnotation = true;
         }
-        // 解析@CacheInvalidate和@CacheInvalidateContainer注解
+        // 解析 @CacheInvalidate 注解
         List<CacheInvalidateAnnoConfig> invalidateAnnoConfigs = parseCacheInvalidates(method);
         if (invalidateAnnoConfigs != null) {
             cac.setInvalidateAnnoConfigs(invalidateAnnoConfigs);
             hasAnnotation = true;
         }
-        // 解析@CacheUpdate注解
+        // 解析 @CacheUpdate 注解
         CacheUpdateAnnoConfig updateAnnoConfig = parseCacheUpdate(method);
         if (updateAnnoConfig != null) {
             cac.setUpdateAnnoConfig(updateAnnoConfig);
             hasAnnotation = true;
         }
 
-        // 如果存在@Cached 和 @CacheInvalidate 或者 @CacheUpdate则抛出异常
+        // @Cached 注解不能与 @CacheInvalidate 或者 @CacheUpdate 注解并存 疑问？？
         if (cachedConfig != null && (invalidateAnnoConfigs != null || updateAnnoConfig != null)) {
             throw new CacheConfigException("@Cached can't coexists with @CacheInvalidate or @CacheUpdate: " + method);
         }

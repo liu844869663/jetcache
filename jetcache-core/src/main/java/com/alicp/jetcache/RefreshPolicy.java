@@ -18,7 +18,7 @@ public class RefreshPolicy implements Cloneable {
 	 */
 	private long stopRefreshAfterLastAccessMillis;
 	/**
-	 * 获取刷新锁的超时时间
+	 * 刷新锁的超时时间
 	 */
 	private long refreshLockTimeoutMillis = 60 * 1000;
 

@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.io.FileOutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -95,7 +96,7 @@ public interface Cache<K, V> extends Closeable {
      *         or error occurs during cache access.
      * @see #PUT_IF_ABSENT(Object, Object, long, TimeUnit)
      */
-    default boolean putIfAbsent(K key, V value) {
+    default boolean putIfAbsent(K key, V value) { // 多级缓存MultiLevelCache不支持此方法
         CacheResult result = PUT_IF_ABSENT(key, value, config().getExpireAfterWriteInMillis(), TimeUnit.MILLISECONDS);
         return result.getResultCode() == CacheResultCode.SUCCESS;
     }
@@ -177,31 +178,35 @@ public interface Cache<K, V> extends Closeable {
         if (key == null) {
             return null;
         }
+        // 随机生成一个值
         final String uuid = UUID.randomUUID().toString();
+        // 过期时间
         final long expireTimestamp = System.currentTimeMillis() + timeUnit.toMillis(expire);
         final CacheConfig config = config();
 
-
-        AutoReleaseLock lock = () -> {
+        AutoReleaseLock lock = () -> { // 创建一把会自动释放资源的锁，实现其 close() 方法
             int unlockCount = 0;
             while (unlockCount++ < config.getTryLockUnlockCount()) {
-                if(System.currentTimeMillis() < expireTimestamp) {
+                if(System.currentTimeMillis() < expireTimestamp) { // 这把锁还没有过期，则删除
+                    // 删除对应的 Key 值
+                    // 出现的结果：成功，失败，Key 不存在
                     CacheResult unlockResult = REMOVE(key);
                     if (unlockResult.getResultCode() == CacheResultCode.FAIL
                             || unlockResult.getResultCode() == CacheResultCode.PART_SUCCESS) {
+                        // 删除对应的 Key 值过程中出现了异常，则重试
                         logger.info("[tryLock] [{} of {}] [{}] unlock failed. Key={}, msg = {}",
                                 unlockCount, config.getTryLockUnlockCount(), uuid, key, unlockResult.getMessage());
                         // retry
-                    } else if (unlockResult.isSuccess()) {
+                    } else if (unlockResult.isSuccess()) { // 释放成功
                         logger.debug("[tryLock] [{} of {}] [{}] successfully release the lock. Key={}",
                                 unlockCount, config.getTryLockUnlockCount(), uuid, key);
                         return;
-                    } else {
+                    } else { // 锁已经被释放了
                         logger.warn("[tryLock] [{} of {}] [{}] unexpected unlock result: Key={}, result={}",
                                 unlockCount, config.getTryLockUnlockCount(), uuid, key, unlockResult.getResultCode());
                         return;
                     }
-                } else {
+                } else { // 该锁已失效
                     logger.info("[tryLock] [{} of {}] [{}] lock already expired: Key={}",
                             unlockCount, config.getTryLockUnlockCount(), uuid, key);
                     return;
@@ -212,8 +217,10 @@ public interface Cache<K, V> extends Closeable {
         int lockCount = 0;
         Cache cache = this;
         while (lockCount++ < config.getTryLockLockCount()) {
+            // 往 Redis（或者本地） 中存放 Key 值（_#RL#结尾的Key）
+            // 返回的结果：成功、已存在、失败
             CacheResult lockResult = cache.PUT_IF_ABSENT(key, uuid, expire, timeUnit);
-            if (lockResult.isSuccess()) {
+            if (lockResult.isSuccess()) { // 成功获取到锁
                 logger.debug("[tryLock] [{} of {}] [{}] successfully get a lock. Key={}",
                         lockCount, config.getTryLockLockCount(), uuid, key);
                 return lock;
@@ -221,6 +228,8 @@ public interface Cache<K, V> extends Closeable {
                 logger.info("[tryLock] [{} of {}] [{}] cache access failed during get lock, will inquiry {} times. Key={}, msg={}",
                         lockCount, config.getTryLockLockCount(), uuid,
                         config.getTryLockInquiryCount(), key, lockResult.getMessage());
+                // 尝试获取锁的过程中失败了，也就是往 Redis 中存放 Key 值出现异常
+                // 这个时候可能 Key 值已经存储了，但是由于其他原因导致返回的结果表示执行失败
                 int inquiryCount = 0;
                 while (inquiryCount++ < config.getTryLockInquiryCount()) {
                     CacheGetResult inquiryResult = cache.GET(key);
@@ -240,7 +249,7 @@ public interface Cache<K, V> extends Closeable {
                         // retry inquiry
                     }
                 }
-            } else {
+            } else { // 已存在表示该锁被其他人占有
                 // others holds the lock
                 logger.debug("[tryLock] [{} of {}] [{}] others holds the lock, return null. Key={}",
                         lockCount, config.getTryLockLockCount(), uuid, key);
@@ -268,13 +277,15 @@ public interface Cache<K, V> extends Closeable {
      * @return true if successfully get the lock and the action is executed
      */
     default boolean tryLockAndRun(K key, long expire, TimeUnit timeUnit, Runnable action){
-        try (AutoReleaseLock lock = tryLock(key, expire, timeUnit)) {
-            if (lock != null) {
+        // Release the lock use Java 7 try-with-resources.
+        try (AutoReleaseLock lock = tryLock(key, expire, timeUnit)) { // 尝试获取锁
+            if (lock != null) { // 获取到锁则执行下面的任务
                 action.run();
                 return true;
             } else {
                 return false;
             }
+            // 执行完锁的操作后会进行资源释放，调用 AutoCloseable 的 close() 方法
         }
     }
 

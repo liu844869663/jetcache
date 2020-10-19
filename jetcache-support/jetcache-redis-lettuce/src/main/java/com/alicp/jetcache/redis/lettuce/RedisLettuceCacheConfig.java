@@ -12,10 +12,17 @@ import io.lettuce.core.api.StatefulConnection;
  */
 public class RedisLettuceCacheConfig<K, V> extends ExternalCacheConfig<K, V> {
 
+    /**
+     * Redis客户端
+     */
     private AbstractRedisClient redisClient;
-
+    /**
+     * 线程安全连接
+     */
     private StatefulConnection connection;
-
+    /**
+     * 异步超时时间
+     */
     private long asyncResultTimeoutInMillis = CacheConsts.ASYNC_RESULT_TIMEOUT.toMillis();
 
     public AbstractRedisClient getRedisClient() {

@@ -12,6 +12,7 @@ public class CacheNamespaceHandler extends NamespaceHandlerSupport {
 
     @Override
     public void init() {
+        // 注册一个解析器，解析 xml 配置文件中的 annotation-driven 标签
         registerBeanDefinitionParser("annotation-driven", new CacheAnnotationParser());
     }
 }

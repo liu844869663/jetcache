@@ -14,6 +14,7 @@ public class CaffeineCacheBuilder<T extends EmbeddedCacheBuilder<T>> extends Emb
     }
 
     protected CaffeineCacheBuilder() {
+        // 设置构建 CaffeineCache 缓存实例的函数
         buildFunc((c) -> new CaffeineCache((EmbeddedCacheConfig) c));
     }
 }

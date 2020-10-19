@@ -57,7 +57,8 @@ public class MultiLevelCache<K, V> extends AbstractCache<K, V> {
 
     @Override
     public CacheResult PUT(K key, V value) {
-        if (config.isUseExpireOfSubCache()) {
+        if (config.isUseExpireOfSubCache()) { // 本地缓存使用自己的失效时间
+            // 设置了TimeUnit为null，本地缓存则使用自己的到期时间
             return PUT(key, value, 0, null);
         } else {
             return PUT(key, value, config().getExpireAfterWriteInMillis(), TimeUnit.MILLISECONDS);
@@ -75,12 +76,18 @@ public class MultiLevelCache<K, V> extends AbstractCache<K, V> {
 
     @Override
     protected CacheGetResult<V> do_GET(K key) {
-    	// 其中可以为两个Cache，一个为远程的，一个为本地的
+    	// 遍历多级缓存（远程缓存排在后面）
         for (int i = 0; i < caches.length; i++) {
             Cache cache = caches[i];
             CacheGetResult result = cache.GET(key);
             if (result.isSuccess()) {
                 CacheValueHolder<V> holder = unwrapHolder(result.getHolder());
+                /*
+                 * 这个遍历是从低层的缓存开始获取，获取成功则将该值设置到更低层的缓存中
+                 * 情景：
+                 * 本地没有获取到缓存，远程获取到了缓存，这里会将远程的缓存数据设置到本地中，
+                 * 这样下次请求则直接从本次获取，减少了远程获取的时间
+                 */
                 checkResultAndFillUpperCache(key, i, holder);
                 return new CacheGetResult(CacheResultCode.SUCCESS, null, holder);
             }
@@ -106,11 +113,12 @@ public class MultiLevelCache<K, V> extends AbstractCache<K, V> {
         long currentExpire = h.getExpireTime();
         long now = System.currentTimeMillis();
         if (now <= currentExpire) {
-            if(config.isUseExpireOfSubCache()){
+            if(config.isUseExpireOfSubCache()){ // 如果使用本地自己的缓存过期时间
+                // 使用本地缓存自己的过期时间
                 PUT_caches(i, key, h.getValue(), 0, null);
-            } else {
+            } else { // 使用远程缓存的过期时间
                 long restTtl = currentExpire - now;
-                if (restTtl > 0) {
+                if (restTtl > 0) { // 远程缓存数据还未失效，则重新设置本地的缓存
                     PUT_caches(i, key, h.getValue(), restTtl, TimeUnit.MILLISECONDS);
                 }
             }
@@ -171,11 +179,12 @@ public class MultiLevelCache<K, V> extends AbstractCache<K, V> {
         for (int i = 0; i < lastIndex; i++) {
             Cache cache = caches[i];
             CacheResult r;
-            if (timeUnit == null) {
+            if (timeUnit == null) { // 表示本地缓存使用自己过期时间
                 r = cache.PUT(key, value);
             } else {
                 r = cache.PUT(key, value, expire, timeUnit);
             }
+            // 将多个 PUT 操作放在一条链上
             future = combine(future, r);
         }
         return new CacheResult(future);

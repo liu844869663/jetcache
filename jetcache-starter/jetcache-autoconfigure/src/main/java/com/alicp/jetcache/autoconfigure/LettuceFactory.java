@@ -17,9 +17,21 @@ public class LettuceFactory implements FactoryBean {
     @Autowired
     private AutoConfigureBeans autoConfigureBeans;
 
+    /**
+     * 是否初始化
+     */
     private boolean inited;
+    /**
+     * 被注入的对象
+     */
     private Object obj;
+    /**
+     * 被注入的类型
+     */
     private Class<?> clazz;
+    /**
+     * 从 AutoConfigureBeans 获取相关 Redis 连接的前缀
+     */
     private String key;
 
     // for unit test
@@ -57,6 +69,12 @@ public class LettuceFactory implements FactoryBean {
         }
     }
 
+    /**
+     * 在 Spring 容器中被注入时会调用该方法返回对象
+     *
+     * @return 被注入的对象
+     * @throws Exception 异常
+     */
     @Override
     public Object getObject() throws Exception {
         init();

@@ -24,7 +24,7 @@ public class CachePointcut extends StaticMethodMatcherPointcut implements ClassF
 	private static final Logger logger = LoggerFactory.getLogger(CachePointcut.class);
 
 	/**
-	 * 本地缓存的方法注解信息
+	 * 方法与缓存配置信息
 	 */
 	private ConfigMap cacheConfigMap;
 	/**
@@ -68,10 +68,10 @@ public class CachePointcut extends StaticMethodMatcherPointcut implements ClassF
 
 	public boolean matchesThis(Class clazz) {
 		String name = clazz.getName();
-		if (exclude(name)) { // 如果该类对象需要exclude则返回false
+		if (exclude(name)) { // 如果该类对象需要排除掉，则返回false
 			return false;
 		}
-		// 判断该类对象是否在basePackages中
+		// 判断该类对象是否在 basePackages 中
 		return include(name);
 	}
 
@@ -133,20 +133,24 @@ public class CachePointcut extends StaticMethodMatcherPointcut implements ClassF
 		String key = getKey(method, targetClass);
 		// 获取本地缓存中该key对应的注解信息
 		CacheInvokeConfig cac = cacheConfigMap.getByMethodInfo(key);
-		if (cac == CacheInvokeConfig.getNoCacheInvokeConfigInstance()) { // 注解信息为NoCacheInvokeConfig，表示无须缓存，则返回false
+		if (cac == CacheInvokeConfig.getNoCacheInvokeConfigInstance()) { // 注解信息为 NoCacheInvokeConfig ，表示无须缓存，则返回false
 			return false;
-		} else if (cac != null) { // 注解信息不为null表示该方法匹配成功
+		} else if (cac != null) { // 注解信息不为 null表 示该方法匹配成功
 			return true;
-		} else { // cac为null
+		} else { // 注解信息为 null
 			cac = new CacheInvokeConfig();
-			// 解析方法的相关注解信息
+			// 解析方法的相关缓存注解信息
 			CacheConfigUtil.parse(cac, method);
-
+			// 方法名称
 			String name = method.getName();
+			// 参数类型
 			Class<?>[] paramTypes = method.getParameterTypes();
-			// 解析父类中方法的注解信息
+			// 解析父类或者接口中该方法的注解信息（因为这个方法可能是继承或者实现父类或者接口的）
 			parseByTargetClass(cac, targetClass, name, paramTypes);
 
+			/*
+			 * 将方法与其相关的缓存注解配置映射关系保存至 ConfigMap
+			 */
 			if (!cac.isEnableCacheContext() && cac.getCachedAnnoConfig() == null
 					&& cac.getInvalidateAnnoConfigs() == null && cac.getUpdateAnnoConfig() == null) { // 该方法不需要缓存
 				cacheConfigMap.putByMethodInfo(key, CacheInvokeConfig.getNoCacheInvokeConfigInstance());
@@ -174,10 +178,12 @@ public class CachePointcut extends StaticMethodMatcherPointcut implements ClassF
 
 	private void parseByTargetClass(CacheInvokeConfig cac, Class<?> clazz, String name, Class<?>[] paramTypes) {
 		if (!clazz.isInterface() && clazz.getSuperclass() != null) {
+			// 解析父类
 			parseByTargetClass(cac, clazz.getSuperclass(), name, paramTypes);
 		}
 		Class<?>[] intfs = clazz.getInterfaces();
 		for (Class<?> it : intfs) {
+			// 解析类中的接口
 			parseByTargetClass(cac, it, name, paramTypes);
 		}
 
@@ -186,6 +192,7 @@ public class CachePointcut extends StaticMethodMatcherPointcut implements ClassF
 			Method[] methods = clazz.getDeclaredMethods();
 			for (Method method : methods) {
 				if (methodMatch(name, method, paramTypes)) {
+					// 解析方法的缓存注解信息
 					CacheConfigUtil.parse(cac, method);
 					break;
 				}

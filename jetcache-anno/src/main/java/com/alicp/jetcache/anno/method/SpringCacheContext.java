@@ -29,6 +29,9 @@ public class SpringCacheContext extends CacheContext {
     public void init() {
         if (applicationContext != null) {
             ConfigMap configMap = applicationContext.getBean(ConfigMap.class);
+            /*
+             * 往缓存实例管理器中添加一个获取（不存在则创建）缓存实例的函数
+             */
             cacheManager.setCacheCreator((area, cacheName) -> {
                 CacheInvokeConfig cic = configMap.getByCacheName(area, cacheName);
                 if (cic == null) {

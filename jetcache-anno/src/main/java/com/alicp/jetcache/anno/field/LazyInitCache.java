@@ -22,13 +22,33 @@ import java.util.function.Function;
  */
 class LazyInitCache implements ProxyCache {
 
+    /**
+     * 是否初始化，用于懒加载
+     */
     private boolean inited;
+    /**
+     * 缓存实例
+     */
     private Cache cache;
-
+    /**
+     * 所处上下文
+     */
     private ConfigurableListableBeanFactory beanFactory;
+    /**
+     * CreateCache 注解元信息
+     */
     private CreateCache ann;
+    /**
+     * 字段
+     */
     private Field field;
+    /**
+     * 刷新策略
+     */
     private RefreshPolicy refreshPolicy;
+    /**
+     * 保护策略
+     */
     private PenetrationProtectConfig protectConfig;
 
     public LazyInitCache(ConfigurableListableBeanFactory beanFactory, CreateCache ann, Field field) {
@@ -56,6 +76,11 @@ class LazyInitCache implements ProxyCache {
         }
     }
 
+    /**
+     * 获取缓存实例，不存在则新建
+     *
+     * @return 缓存实例
+     */
     @Override
     public Cache getTargetCache() {
         checkInit();
@@ -66,9 +91,11 @@ class LazyInitCache implements ProxyCache {
         if (inited) {
             throw new IllegalStateException();
         }
+        // 从 spring 的容器中获取全局缓存配置 GlobalCacheConfig 对象
         GlobalCacheConfig globalCacheConfig = beanFactory.getBean(GlobalCacheConfig.class);
         ConfigProvider configProvider = beanFactory.getBean(ConfigProvider.class);
 
+        // 将注解信息封装到 CachedAnnoConfig 对象中
         CachedAnnoConfig cac = new CachedAnnoConfig();
         cac.setArea(ann.area());
         cac.setName(ann.name());
@@ -89,6 +116,7 @@ class LazyInitCache implements ProxyCache {
             CacheNameGenerator g = configProvider.createCacheNameGenerator(hiddenPackages);
             cacheName = g.generateCacheName(field);
         }
+        // 从缓存实例管理器中获取或者创建对应的缓存实例
         cache = configProvider.getCacheContext().__createOrGetCache(cac, ann.area(), cacheName);
     }
 

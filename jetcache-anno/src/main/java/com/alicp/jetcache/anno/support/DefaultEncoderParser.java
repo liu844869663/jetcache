@@ -39,6 +39,12 @@ public class DefaultEncoderParser implements EncoderParser {
         return new JavaValueDecoder(useIdentityNumber);
     }
 
+    /**
+     * 根据 valueEncoder 生成缓存数据的编码函数
+     *
+     * @param valueEncoder value的编码类型
+     * @return 编码函数
+     */
     @Override
     public Function<Object, byte[]> parseEncoder(String valueEncoder) {
         if (valueEncoder == null) {
@@ -61,6 +67,12 @@ public class DefaultEncoderParser implements EncoderParser {
         }
     }
 
+    /**
+     * 根据 valueDecoder 生成缓存数据的解码函数
+     *
+     * @param valueDecoder value的解码类型
+     * @return 解码类型
+     */
     @Override
     public Function<byte[], Object> parseDecoder(String valueDecoder) {
         if (valueDecoder == null) {

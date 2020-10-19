@@ -10,6 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 /**
+ * 该 Bean 将会被 Spring 容器注入，依次注入下面几个 Bean
+ * SpringConfigProvider -> AutoConfigureBeans -> BeanDependencyManager(为 GlobalCacheConfig 添加 CacheAutoInit 依赖) -> GlobalCacheConfig
+ * 由此会完成初始化配置操作，缓存实例构造器 CacheBuilder 也会被注入容器
+ *
  * Created on 2016/11/17.
  *
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>

@@ -24,7 +24,7 @@ public class CacheUtil {
 		if (loader instanceof ProxyLoader) {
 			return (ProxyLoader<K, V>) loader;
 		}
-		// 对CacheLoder进行封装
+		// 对CacheLoader进行封装
 		return new ProxyLoader<K, V>() {
 			@Override
 			public V load(K key) throws Throwable {

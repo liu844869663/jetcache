@@ -14,14 +14,35 @@ import java.util.function.Function;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class CacheInvokeContext {
+    /**
+     * 被拦截的对象的调用器
+     */
     private Invoker invoker;
+    /**
+     * 拦截的方法
+     */
     private Method method;
+    /**
+     * 拦截的方法的入参
+     */
     private Object[] args;
+    /**
+     * 拦截的方法的缓存配置信息，包含缓存实例
+     */
     private CacheInvokeConfig cacheInvokeConfig;
+    /**
+     * 被拦截的对象
+     */
     private Object targetObject;
+    /**
+     * 执行后的返回结果
+     */
     private Object result;
 
     private BiFunction<CacheInvokeContext, CacheAnnoConfig, Cache> cacheFunction;
+    /**
+     * 需要隐藏的包名
+     */
     private String[] hiddenPackages;
 
     public CacheInvokeContext(){

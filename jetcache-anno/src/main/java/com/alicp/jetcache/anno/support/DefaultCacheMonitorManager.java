@@ -106,8 +106,10 @@ public class DefaultCacheMonitorManager extends AbstractLifecycle implements Cac
 
     protected void initMetricsMonitor() {
         if (globalCacheConfig.getStatIntervalMinutes() > 0) {
+            // 初始化指标监控器
             defaultMetricsManager = new DefaultMetricsManager(globalCacheConfig.getStatIntervalMinutes(),
                     TimeUnit.MINUTES, metricsCallback);
+            // 启动指标监控器
             defaultMetricsManager.start();
         }
     }

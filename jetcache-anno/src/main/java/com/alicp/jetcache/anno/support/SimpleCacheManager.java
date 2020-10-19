@@ -17,7 +17,15 @@ public class SimpleCacheManager implements CacheManager {
 
     private static final Logger logger = LoggerFactory.getLogger(SimpleCacheManager.class);
 
+    /**
+     * 映射关系：缓存区域-> [缓存实例名称->缓存实例]
+     */
     private ConcurrentHashMap<String, ConcurrentHashMap<String, Cache>> caches = new ConcurrentHashMap<>();
+
+    /**
+     * 根据缓存区域和缓存实例名称获取（不存在则创建）缓存实例对象函数
+     * 在 SpringCacheContext 中初始化
+     */
     private BiFunction<String, String, Cache> cacheCreator;
 
     static SimpleCacheManager defaultManager = new SimpleCacheManager();
@@ -25,10 +33,14 @@ public class SimpleCacheManager implements CacheManager {
     public SimpleCacheManager() {
     }
 
+    /**
+     * 清楚缓存实例管理器中的所有缓存实例
+     */
     public void rebuild() {
         caches.forEach((area, areaMap) -> {
             areaMap.forEach((cacheName, cache) -> {
                 try {
+                    // 释放每个缓存实例的资源
                     cache.close();
                 } catch (Exception e) {
                     logger.error("error during close", e);

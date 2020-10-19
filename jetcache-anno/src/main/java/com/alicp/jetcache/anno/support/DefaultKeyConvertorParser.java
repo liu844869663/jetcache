@@ -15,7 +15,7 @@ import java.util.function.Function;
 public class DefaultKeyConvertorParser implements KeyConvertorParser {
 
 	/**
-	 * 生成Cache的key转换器函数，目前仅支持FASTJSON
+	 * 生产缓存 Key 的转换器函数
 	 */
 	@Override
 	public Function<Object, Object> parseKeyConvertor(String convertor) {
@@ -23,7 +23,6 @@ public class DefaultKeyConvertorParser implements KeyConvertorParser {
 			return null;
 		}
 		if (KeyConvertor.FASTJSON.equalsIgnoreCase(convertor)) {
-			// 返回FastjsonKeyConvertor实例(单例模式)
 			return FastjsonKeyConvertor.INSTANCE;
 		} else if (KeyConvertor.NONE.equalsIgnoreCase(convertor)) {
 			return null;

@@ -20,16 +20,20 @@ class ExpressionUtil {
     static Object EVAL_FAILED = new Object();
 
     public static boolean evalCondition(CacheInvokeContext context, CacheAnnoConfig cac) {
+        // 获取缓存注解中的 condition
         String condition = cac.getCondition();
         try {
             if (cac.getConditionEvaluator() == null) {
                 if (CacheConsts.isUndefined(condition)) {
+                    // 没有定义 condition 则直接返回 true，表示走缓存
                     cac.setConditionEvaluator(o -> true);
                 } else {
+                    // 根据 condition 生成条件函数
                     ExpressionEvaluator e = new ExpressionEvaluator(condition, cac.getDefineMethod());
                     cac.setConditionEvaluator((o) -> (Boolean) e.apply(o));
                 }
             }
+            // 根据条件函数判断是否走缓存
             return cac.getConditionEvaluator().apply(context);
         } catch (Exception e) {
             logger.error("error occurs when eval condition \"" + condition + "\" in " + context.getMethod() + ":" + e.getMessage(), e);
@@ -38,16 +42,20 @@ class ExpressionUtil {
     }
 
     public static boolean evalPostCondition(CacheInvokeContext context, CachedAnnoConfig cac) {
+        // 获取缓存注解中的 postCondition
         String postCondition = cac.getPostCondition();
         try {
             if (cac.getPostConditionEvaluator() == null) {
                 if (CacheConsts.isUndefined(postCondition)) {
+                    // 没有定义 postCondition 直接返回 true，表示拒绝更新缓存，也就是不更新缓存
                     cac.setPostConditionEvaluator(o -> true);
                 } else {
+                    // 根据 postCondition 生成条件函数
                     ExpressionEvaluator e = new ExpressionEvaluator(postCondition, cac.getDefineMethod());
                     cac.setPostConditionEvaluator((o) -> (Boolean) e.apply(o));
                 }
             }
+            // 根据条件函数判断是否拒绝更新缓存
             return cac.getPostConditionEvaluator().apply(context);
         } catch (Exception e) {
             logger.error("error occurs when eval postCondition \"" + postCondition + "\" in " + context.getMethod() + ":" + e.getMessage(), e);
@@ -56,23 +64,23 @@ class ExpressionUtil {
     }
 
     public static Object evalKey(CacheInvokeContext context, CacheAnnoConfig cac) {
-    	// 获取注解中定义的key
+    	// 获取注解中定义的缓存 key 的 SpEL 表达式
         String keyScript = cac.getKey();
         try {
             if (cac.getKeyEvaluator() == null) {
-                if (CacheConsts.isUndefined(keyScript)) { // key没有定义
+                if (CacheConsts.isUndefined(keyScript)) { // 1.没有定义 SpEL表达式
                     cac.setKeyEvaluator(o -> {
                         CacheInvokeContext c = (CacheInvokeContext) o;
-                        // 获取方法的入参
+                        // 直接返回被拦截方法的入参
                         return c.getArgs() == null ? "_$JETCACHE_NULL_KEY$_" : c.getArgs();
                     });
-                } else { // 添加前缀
-                	// 如果key使用了SpEL表达式则进行解析
+                } else {
+                	// 2.定义了 SpEL表达式，生成一个转换函数
                     ExpressionEvaluator e = new ExpressionEvaluator(keyScript, cac.getDefineMethod());
                     cac.setKeyEvaluator((o) -> e.apply(o));
                 }
             }
-            // 执行上述方法
+            // 调用生成缓存 Key 的函数，返回本次调用的缓存 Key
             return cac.getKeyEvaluator().apply(context);
         } catch (Exception e) {
             logger.error("error occurs when eval key \"" + keyScript + "\" in " + context.getMethod() + ":" + e.getMessage(), e);

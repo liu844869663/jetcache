@@ -18,6 +18,7 @@ public class RedisCacheBuilder<T extends ExternalCacheBuilder<T>> extends Extern
     }
 
     protected RedisCacheBuilder() {
+        // 生成一个构建 RedisCacheConfig 缓存实例的函数
         buildFunc(config -> new RedisCache((RedisCacheConfig) config));
     }
 

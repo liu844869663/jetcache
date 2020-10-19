@@ -34,10 +34,17 @@ public class CacheContext {
             return new CacheThreadLocal();
         }
     };
-
+    /**
+     * JetCache 缓存的管理器（包含很多信息）
+     */
     private ConfigProvider configProvider;
+    /**
+     * 缓存的全局配置
+     */
     private GlobalCacheConfig globalCacheConfig;
-
+    /**
+     * 缓存实例管理器
+     */
     protected SimpleCacheManager cacheManager;
 
     public CacheContext(ConfigProvider configProvider, GlobalCacheConfig globalCacheConfig) {
@@ -49,11 +56,13 @@ public class CacheContext {
     public CacheInvokeContext createCacheInvokeContext(ConfigMap configMap) {
     	// 创建一个本次调用的上下文
         CacheInvokeContext c = newCacheInvokeContext();
-        // 以下方法很关键,创建对应的缓存对象
+        // 添加一个函数，后续用于获取缓存实例
+        // 根据注解配置信息获取缓存实例对象，不存在则创建并设置到缓存注解配置类中
         c.setCacheFunction((invokeContext, cacheAnnoConfig) -> {
             Cache cache = cacheAnnoConfig.getCache();
             if (cache == null) {
                 if (cacheAnnoConfig instanceof CachedAnnoConfig) { // 缓存注解
+                    // 根据配置创建一个缓存实例对象，通过 CacheBuilder
                     cache = createCacheByCachedConfig((CachedAnnoConfig) cacheAnnoConfig, invokeContext);
                 } else if ((cacheAnnoConfig instanceof CacheInvalidateAnnoConfig) || (cacheAnnoConfig instanceof CacheUpdateAnnoConfig)) { // 更新/使失效缓存注解
                     CacheInvokeConfig cacheDefineConfig = configMap.getByCacheName(cacheAnnoConfig.getArea(), cacheAnnoConfig.getName());
@@ -75,18 +84,17 @@ public class CacheContext {
     }
 
     private Cache createCacheByCachedConfig(CachedAnnoConfig ac, CacheInvokeContext invokeContext) {
-    	// 从CachedAnnoConfig注解详情中获取缓存区域(默认default)
+    	// 缓存区域
         String area = ac.getArea();
-        // 从CachedAnnoConfig注解详情中获取缓存名称(作为前缀)
+        // 缓存实例名称
         String cacheName = ac.getName();
-        if (CacheConsts.isUndefined(cacheName)) { // 缓存名称没有定义
+        if (CacheConsts.isUndefined(cacheName)) { // 没有定义缓存实例名称
 
-        	// 如果注解中没有定义cacheName,则自动生成(类名+方法名+(参数类型)+返回类型)
-        	// 如果设置了hiddenPackages,则去除包含hiddenPackages的前缀
+        	// 生成缓存实例名称：类名+方法名+(参数类型)
             cacheName = configProvider.createCacheNameGenerator(invokeContext.getHiddenPackages())
                     .generateCacheName(invokeContext.getMethod(), invokeContext.getTargetObject());
         }
-        // 创建缓存对象
+        // 创建缓存实例对象
         Cache cache = __createOrGetCache(ac, area, cacheName);
         return cache;
     }
@@ -105,16 +113,21 @@ public class CacheContext {
     public Cache __createOrGetCache(CachedAnnoConfig cachedAnnoConfig, String area, String cacheName) {
     	// 缓存名称拼接
         String fullCacheName = area + "_" + cacheName;
-        // 从area获取cacheName的Cache缓存
+        // 从缓存实例管理器中根据缓存区域和缓存实例名称获取缓存实例
         Cache cache = cacheManager.getCacheWithoutCreate(area, cacheName);
         if (cache == null) {
-            synchronized (this) {
+            synchronized (this) { // 加锁
+                // 再次确认
                 cache = cacheManager.getCacheWithoutCreate(area, cacheName);
                 if (cache == null) {
-                    if (globalCacheConfig.isAreaInCacheName()) { // areaName是否作为缓存的key名称前缀,默认为true
+                    /*
+                     * 缓存区域的名称是否作为缓存 key 名称前缀，默认为 true ，我一般设置为 false
+                     */
+                    if (globalCacheConfig.isAreaInCacheName()) {
                         // for compatible reason, if we use default configuration, the prefix should same to that version <=2.4.3
                         cache = buildCache(cachedAnnoConfig, area, fullCacheName);
-                    } else { // 直接使用cacheName
+                    } else {
+                        // 构建一个缓存实例
                         cache = buildCache(cachedAnnoConfig, area, cacheName);
                     }
                     cacheManager.putCache(area, cacheName, cache);
@@ -131,12 +144,11 @@ public class CacheContext {
         } else if (cachedAnnoConfig.getCacheType() == CacheType.REMOTE) { // 远程缓存
             cache = buildRemote(cachedAnnoConfig, area, cacheName);
         } else { // 两级缓存
-        	// 本地缓存
+        	// 构建本地缓存实例
             Cache local = buildLocal(cachedAnnoConfig, area);
-            // 远程缓存
+            // 构建远程缓存实例
             Cache remote = buildRemote(cachedAnnoConfig, area, cacheName);
-
-            // 是否本地缓存失效
+            // 两级缓存时是否单独设置了本地缓存失效时间 localExpire
             boolean useExpireOfSubCache = cachedAnnoConfig.getLocalExpire() > 0;
             // 创建一个两级缓存CacheBuilder
             cache = MultiLevelCacheBuilder.createMultiLevelCacheBuilder()
@@ -148,7 +160,8 @@ public class CacheContext {
         }
         // 设置缓存刷新策略
         cache.config().setRefreshPolicy(cachedAnnoConfig.getRefreshPolicy());
-        // 将cache封装成CacheHandlerRefreshCache
+        // 将 cache 封装成 CacheHandlerRefreshCache，也就是 RefreshCache 类型
+        // 后续添加刷新任务时会判断是否为 RefreshCache 类型，然后决定是否执行 addOrUpdateRefreshTask 方法，添加刷新任务，没有刷新策略不会添加
         cache = new CacheHandler.CacheHandlerRefreshCache(cache);
 
         // 设置缓存未命中时，JVM是否只允许一个线程执行方法，其他线程等待，全局配置默认为false
@@ -167,12 +180,12 @@ public class CacheContext {
     }
 
     protected Cache buildRemote(CachedAnnoConfig cachedAnnoConfig, String area, String cacheName) {
-    	// 获取area远程缓存实例
+        // 获取缓存区域对应的 CacheBuilder 构造器
         ExternalCacheBuilder cacheBuilder = (ExternalCacheBuilder) globalCacheConfig.getRemoteCacheBuilders().get(area);
         if (cacheBuilder == null) {
             throw new CacheConfigException("no remote cache builder: " + area);
         }
-        // 克隆一个CacheBuilder
+        // 克隆一个 CacheBuilder 构造器，因为不同缓存实例有不同的配置
         cacheBuilder = (ExternalCacheBuilder) cacheBuilder.clone();
 
         if (cachedAnnoConfig.getExpire() > 0 ) {
@@ -180,43 +193,43 @@ public class CacheContext {
             cacheBuilder.expireAfterWrite(cachedAnnoConfig.getExpire(), cachedAnnoConfig.getTimeUnit());
         }
 
-        // 设置前缀
+        // 设置缓存 key 的前缀
         if (cacheBuilder.getConfig().getKeyPrefix() != null) {
+            // 配置文件中配置了 prefix，则设置为 prefix+cacheName
             cacheBuilder.setKeyPrefix(cacheBuilder.getConfig().getKeyPrefix() + cacheName);
-        } else {
+        } else { // 设置为 cacheName
             cacheBuilder.setKeyPrefix(cacheName);
         }
 
-        if (!CacheConsts.isUndefined(cachedAnnoConfig.getKeyConvertor())) {
-        	// 设置key的转换器，KeyConvertor为函数编程通过DefaultKeyConvertorParser生成一个FastjsonKeyConvertor
-        	// FastjsonKeyConvertor为单例模式，实际上通过alibaba的JSON.toJSONString(originalKey)转换成字符串
+        if (!CacheConsts.isUndefined(cachedAnnoConfig.getKeyConvertor())) { // 如果注解中设置了Key的转换方式则替换，否则还是使用全局的
+        	// 设置 key 的转换器，只支持 FASTJSON
             cacheBuilder.setKeyConvertor(configProvider.parseKeyConvertor(cachedAnnoConfig.getKeyConvertor()));
         }
         if (!CacheConsts.isUndefined(cachedAnnoConfig.getSerialPolicy())) {
-        	// value保存至远程需要进行编码和解码，所以这里设置value的编码和解码方式，KRYO和JAVA可选择
-        	// 也是生成一个函数，其中实现apply(Object value)对value的编码以及解码
+        	// 缓存数据保存至远程需要进行编码和解码，所以这里设置其编码和解码方式，KRYO 和 JAVA 可选择
             cacheBuilder.setValueEncoder(configProvider.parseValueEncoder(cachedAnnoConfig.getSerialPolicy()));
             cacheBuilder.setValueDecoder(configProvider.parseValueDecoder(cachedAnnoConfig.getSerialPolicy()));
         }
-        // 设置是否缓存Null值，默认为false
+        // 设置是否缓存 null 值
         cacheBuilder.setCacheNullValue(cachedAnnoConfig.isCacheNullValue());
         return cacheBuilder.buildCache();
     }
 
     protected Cache buildLocal(CachedAnnoConfig cachedAnnoConfig, String area) {
-    	// 获取area本地缓存实例
+    	// 获取缓存区域对应的 CacheBuilder 构造器
         EmbeddedCacheBuilder cacheBuilder = (EmbeddedCacheBuilder) globalCacheConfig.getLocalCacheBuilders().get(area);
         if (cacheBuilder == null) {
             throw new CacheConfigException("no local cache builder: " + area);
         }
-        // 克隆一个CacheBuilder
+        // 克隆一个 CacheBuilder 构造器，因为不同缓存实例有不同的配置
         cacheBuilder = (EmbeddedCacheBuilder) cacheBuilder.clone();
 
         if (cachedAnnoConfig.getLocalLimit() != CacheConsts.UNDEFINED_INT) {
-            cacheBuilder.setLimit(cachedAnnoConfig.getLocalLimit()); // 个数限制
+            // 本地缓存数量限制
+            cacheBuilder.setLimit(cachedAnnoConfig.getLocalLimit());
         }
         if (cachedAnnoConfig.getCacheType() == CacheType.BOTH && cachedAnnoConfig.getLocalExpire() > 0) {
-        	// 设置失效时间(本地失效时间)
+        	// 设置本地缓存失效时间，前提是多级缓存，一般和远程缓存保持一致不设置
             cacheBuilder.expireAfterWrite(cachedAnnoConfig.getLocalExpire(), cachedAnnoConfig.getTimeUnit());
         } else if (cachedAnnoConfig.getExpire() > 0) {
         	// 设置失效时间
@@ -225,7 +238,9 @@ public class CacheContext {
         if (!CacheConsts.isUndefined(cachedAnnoConfig.getKeyConvertor())) {
             cacheBuilder.setKeyConvertor(configProvider.parseKeyConvertor(cachedAnnoConfig.getKeyConvertor()));
         }
+        // 设置是否缓存 null 值
         cacheBuilder.setCacheNullValue(cachedAnnoConfig.isCacheNullValue());
+        // 构建一个缓存实例
         return cacheBuilder.buildCache();
     }
 

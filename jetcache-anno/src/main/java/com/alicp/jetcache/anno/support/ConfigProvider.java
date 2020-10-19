@@ -15,18 +15,45 @@ import java.util.function.Function;
  */
 public class ConfigProvider extends AbstractLifecycle {
 
+    /**
+     * 缓存的全局配置
+     */
     @Resource
     protected GlobalCacheConfig globalCacheConfig;
-
+    /**
+     * 缓存实例管理器
+     */
     protected SimpleCacheManager cacheManager;
+    /**
+     * 根据不同类型生成缓存数据转换函数的转换器
+     */
     protected EncoderParser encoderParser;
+    /**
+     * 根据不同类型生成缓存 Key 转换函数的转换器
+     */
     protected KeyConvertorParser keyConvertorParser;
+    /**
+     * 缓存监控指标管理器
+     */
     protected CacheMonitorManager cacheMonitorManager;
+    /**
+     * 打印缓存各项指标的函数
+     */
     private Consumer<StatInfo> metricsCallback = new StatInfoLogger(false);
+    /**
+     * 缓存更新事件（REMOVE OR PUT）消息接收者，无实现类
+     * 我们可以自己实现 CacheMessagePublisher 用于统计一些缓存的命中信息
+     */
     private CacheMessagePublisher cacheMessagePublisher;
 
+    /**
+     * 默认的缓存监控指标管理器
+     */
     private CacheMonitorManager defaultCacheMonitorManager = new DefaultCacheMonitorManager();
 
+    /**
+     * 缓存上下文
+     */
     private CacheContext cacheContext;
 
     public ConfigProvider() {
@@ -38,7 +65,9 @@ public class ConfigProvider extends AbstractLifecycle {
 
     @Override
     public void doInit() {
+        // 启动缓存指标监控器，周期性打印各项指标
         initDefaultCacheMonitorInstaller();
+        // 初始化缓存上下文
         cacheContext = newContext();
     }
 
@@ -50,6 +79,7 @@ public class ConfigProvider extends AbstractLifecycle {
             if (cacheMessagePublisher != null) {
                 installer.setCacheMessagePublisher(cacheMessagePublisher);
             }
+            // 启动缓存指标监控器
             installer.init();
         }
     }
@@ -57,6 +87,7 @@ public class ConfigProvider extends AbstractLifecycle {
     @Override
     public void doShutdown() {
         shutdownDefaultCacheMonitorInstaller();
+        // 清除缓存实例
         cacheManager.rebuild();
     }
 
@@ -67,24 +98,30 @@ public class ConfigProvider extends AbstractLifecycle {
     }
 
     /**
-     * Keep this method for backward compatibility.
-     * NOTICE: there is no getter for encoderParser.
+     * 根据编码类型通过缓存value转换器生成编码函数
+     *
+     * @param valueEncoder 编码类型
+     * @return 编码函数
      */
     public Function<Object, byte[]> parseValueEncoder(String valueEncoder) {
         return encoderParser.parseEncoder(valueEncoder);
     }
 
     /**
-     * Keep this method for backward compatibility.
-     * NOTICE: there is no getter for encoderParser.
+     * 根据解码类型通过缓存value转换器生成解码函数
+     *
+     * @param valueDecoder 解码类型
+     * @return 解码函数
      */
     public Function<byte[], Object> parseValueDecoder(String valueDecoder) {
         return encoderParser.parseDecoder(valueDecoder);
     }
 
     /**
-     * Keep this method for backward compatibility.
-     * NOTICE: there is no getter for keyConvertorParser.
+     * 根据转换类型通过缓存key转换器生成转换函数
+     *
+     * @param convertor 转换类型
+     * @return 转换函数
      */
     public Function<Object, Object> parseKeyConvertor(String convertor) {
         return keyConvertorParser.parseKeyConvertor(convertor);

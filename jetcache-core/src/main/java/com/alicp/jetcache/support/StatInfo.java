@@ -8,8 +8,17 @@ import java.util.List;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class StatInfo {
+    /**
+     * 所有缓存实例列表
+     */
     private List<CacheStat> stats;
+    /**
+     * 开始时间
+     */
     private long startTime;
+    /**
+     * 结束时间
+     */
     private long endTime;
 
     public List<CacheStat> getStats() {

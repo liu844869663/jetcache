@@ -3,19 +3,18 @@
  */
 package com.alicp.jetcache.anno.support;
 
-import com.alicp.jetcache.CacheConfigException;
 import com.alicp.jetcache.anno.SerialPolicy;
-import com.alicp.jetcache.support.*;
+import com.alicp.jetcache.support.JavaValueDecoder;
+import com.alicp.jetcache.support.SpringJavaValueDecoder;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 /**
+ * 支持获取用户自定义编码或者解码函数
+ *
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class DefaultSpringEncoderParser extends DefaultEncoderParser implements ApplicationContextAware {
@@ -38,14 +37,18 @@ public class DefaultSpringEncoderParser extends DefaultEncoderParser implements 
 	}
 
 	/**
-	 * 生成对应的value编码函数
+	 * 根据 valueEncoder 生成缓存数据的编码函数
+	 *
+	 * @param valueEncoder value的编码类型
+	 * @return 编码函数
 	 */
 	@Override
 	public Function<Object, byte[]> parseEncoder(String valueEncoder) {
+		// 根据 valueEncoder 解析对应的 bean 名称，用于用户自定义 value 编码函数
 		String beanName = parseBeanName(valueEncoder);
-		if (beanName == null) { // 从自己实现的Encoder获取实例
+		if (beanName == null) {
 			return super.parseEncoder(valueEncoder);
-		} else { // 从Spring IOC容器中获取用户自定义的Encoder
+		} else { // 从 Spring 容器中获取用户自定义的 value 编码函数
 			Object bean = applicationContext.getBean(beanName);
 			if (bean instanceof Function) {
 				return (Function<Object, byte[]>) bean;
@@ -56,14 +59,18 @@ public class DefaultSpringEncoderParser extends DefaultEncoderParser implements 
 	}
 
 	/**
-	 * 生成对应的value解码函数
+	 * 根据 valueDecoder 生成缓存数据的解码函数
+	 *
+	 * @param valueDecoder value的解码类型
+	 * @return 解码类型
 	 */
 	@Override
 	public Function<byte[], Object> parseDecoder(String valueDecoder) {
+		// 根据 valueEncoder 解析对应的 bean 名称，用于用户自定义 value 解码函数
 		String beanName = parseBeanName(valueDecoder);
 		if (beanName == null) {
 			return super.parseDecoder(valueDecoder);
-		} else {
+		} else { // 从 Spring 容器中获取用户自定义的 value 解码函数
 			Object bean = applicationContext.getBean(beanName);
 			if (bean instanceof Function) {
 				return (Function<byte[], Object>) bean;

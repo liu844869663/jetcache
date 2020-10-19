@@ -15,6 +15,10 @@ public class KryoValueEncoder extends AbstractValueEncoder {
 
     public static final KryoValueEncoder INSTANCE = new KryoValueEncoder(true);
 
+    /**
+     * 十六进制：0x4A953A80
+     * 十进制：1251293826
+     */
     protected static int IDENTITY_NUMBER = 0x4A953A82;
 
     private static int INIT_BUFFER_SIZE = 512;

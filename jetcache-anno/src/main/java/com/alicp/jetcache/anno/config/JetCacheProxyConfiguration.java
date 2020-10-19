@@ -26,6 +26,7 @@ public class JetCacheProxyConfiguration implements ImportAware, ApplicationConte
 
     @Override
     public void setImportMetadata(AnnotationMetadata importMetadata) {
+        // 获取 @EnableMethodCache 注解信息
         this.enableMethodCache = AnnotationAttributes.fromMap(
                 importMetadata.getAnnotationAttributes(EnableMethodCache.class.getName(), false));
         if (this.enableMethodCache == null) {
@@ -45,15 +46,20 @@ public class JetCacheProxyConfiguration implements ImportAware, ApplicationConte
         CacheAdvisor advisor = new CacheAdvisor();
         // bean的名称：jetcache2.internalCacheAdvisor
         advisor.setAdviceBeanName(CacheAdvisor.CACHE_ADVISOR_BEAN_NAME);
-        // 设置缓存拦截器为JetCacheInterceptor
+        // 设置缓存拦截器为 JetCacheInterceptor
         advisor.setAdvice(jetCacheInterceptor);
         // 设置需要扫描的包
         advisor.setBasePackages(this.enableMethodCache.getStringArray("basePackages"));
-        // 设置优先级，默认Integer的最大值
+        // 设置优先级，默认 Integer 的最大值，最低优先级
         advisor.setOrder(this.enableMethodCache.<Integer>getNumber("order"));
         return advisor;
     }
 
+    /**
+     * 注入一个 JetCacheInterceptor 拦截器，设置为框架内部的角色
+     *
+     * @return JetCacheInterceptor
+     */
     @Bean
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public JetCacheInterceptor jetCacheInterceptor() {

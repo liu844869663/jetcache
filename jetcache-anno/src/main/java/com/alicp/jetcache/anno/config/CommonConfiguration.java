@@ -14,6 +14,11 @@ import org.springframework.context.annotation.Role;
  */
 @Configuration
 public class CommonConfiguration {
+    /**
+     * 注入一个 Bean 至容器，设置为框架内部的角色
+     *
+     * @return ConfigMap
+     */
     @Bean
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public ConfigMap jetcacheConfigMap() {

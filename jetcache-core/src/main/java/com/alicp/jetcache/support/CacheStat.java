@@ -13,7 +13,7 @@ public class CacheStat implements Serializable, Cloneable {
 
     private static final long serialVersionUID = -8802969946750554026L;
 
-    protected String cacheName; // 缓存名称
+    protected String cacheName; // 缓存实例的名称
     protected long statStartTime; // 统计开始时间
     protected long statEndTime; // 统计结束时间
 
@@ -22,30 +22,30 @@ public class CacheStat implements Serializable, Cloneable {
     protected long getMissCount; // 未命中次数
     protected long getFailCount; // 失败次数
     protected long getExpireCount; // 超时次数
-    protected long getTimeSum; // 总的时间
-    protected long minGetTime = Long.MAX_VALUE; // 最小时间
-    protected long maxGetTime = 0;
+    protected long getTimeSum; // 总的获取时间
+    protected long minGetTime = Long.MAX_VALUE; // 最小获取时间
+    protected long maxGetTime = 0; // 最大获取时间
 
-    protected long putCount;
-    protected long putSuccessCount;
-    protected long putFailCount;
-    protected long putTimeSum;
-    protected long minPutTime = Long.MAX_VALUE;
-    protected long maxPutTime = 0;
+    protected long putCount; // 总的放入次数
+    protected long putSuccessCount; // 放入成功次数
+    protected long putFailCount; // 放入失败次数
+    protected long putTimeSum; // 总的放入时间
+    protected long minPutTime = Long.MAX_VALUE;  // 最小放入时间
+    protected long maxPutTime = 0; // 最大放入时间
 
-    protected long removeCount;
-    protected long removeSuccessCount;
-    protected long removeFailCount;
-    protected long removeTimeSum;
-    protected long minRemoveTime = Long.MAX_VALUE;
-    protected long maxRemoveTime = 0;
+    protected long removeCount; // 总的删除次数
+    protected long removeSuccessCount; // 删除成功次数
+    protected long removeFailCount; // 删除失败次数
+    protected long removeTimeSum; // 删除时间总和
+    protected long minRemoveTime = Long.MAX_VALUE; // 删除的最小时间
+    protected long maxRemoveTime = 0; // 删除的最大时间
 
-    protected long loadCount;
-    protected long loadSuccessCount;
-    protected long loadFailCount;
-    protected long loadTimeSum;
-    protected long minLoadTime = Long.MAX_VALUE;
-    protected long maxLoadTime = 0;
+    protected long loadCount; // 总的加载次数
+    protected long loadSuccessCount; // 加载成功次数
+    protected long loadFailCount; // 加载失败次数
+    protected long loadTimeSum; // 加载时间总和
+    protected long minLoadTime = Long.MAX_VALUE; // 加载的最小时间
+    protected long maxLoadTime = 0; // 加载的最大时间
 
     @Override
     public CacheStat clone() {

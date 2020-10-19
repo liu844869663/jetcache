@@ -13,10 +13,17 @@ import java.util.Map;
  */
 public class AutoConfigureBeans {
 
+    /**
+     * 存放本地缓存的 CacheBuilder 构造器，key 为 area
+     */
     private Map<String, CacheBuilder> localCacheBuilders = new HashMap<>();
-
+    /**
+     * 存放远程缓存的 CacheBuilder 构造器，key 为 area
+     */
     private Map<String, CacheBuilder> remoteCacheBuilders = new HashMap<>();
-
+    /**
+     * 存放 redis 的连接相关信息，线程安全
+     */
     private Map<String, Object> customContainer = Collections.synchronizedMap(new HashMap<>());
 
     public Map<String, CacheBuilder> getLocalCacheBuilders() {

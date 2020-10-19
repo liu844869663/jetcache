@@ -88,14 +88,15 @@ public class CacheHandler implements InvocationHandler {
 	}
 
 	private static Object doInvoke(CacheInvokeContext context) throws Throwable {
-		// 获取上下文中该方法的的注解详情
+		// 获取本地调用的上下文
 		CacheInvokeConfig cic = context.getCacheInvokeConfig();
-		// 获取cachedAnnoConfig配置信息，其中包含@Cached和@CacheRefresh注解信息
+		// 获取注解配置信息
 		CachedAnnoConfig cachedConfig = cic.getCachedAnnoConfig();
 		if (cachedConfig != null && (cachedConfig.isEnabled() || CacheContextSupport._isEnabled())) {
-			// 从缓存中获取结果(中途没有缓存则调用invokeOrigin())
+			// 经过缓存中获取结果
 			return invokeWithCached(context);
 		} else if (cic.getInvalidateAnnoConfigs() != null || cic.getUpdateAnnoConfig() != null) {
+			// 根据结果删除或者更新缓存
 			return invokeWithInvalidateOrUpdate(context);
 		} else {
 			// 执行该方法
@@ -104,15 +105,18 @@ public class CacheHandler implements InvocationHandler {
 	}
 
 	private static Object invokeWithInvalidateOrUpdate(CacheInvokeContext context) throws Throwable {
+		// 执行当前方法
 		Object originResult = invokeOrigin(context);
 		context.setResult(originResult);
 		CacheInvokeConfig cic = context.getCacheInvokeConfig();
 
 		if (cic.getInvalidateAnnoConfigs() != null) {
+			// 是否删除缓存
 			doInvalidate(context, cic.getInvalidateAnnoConfigs());
 		}
 		CacheUpdateAnnoConfig updateAnnoConfig = cic.getUpdateAnnoConfig();
 		if (updateAnnoConfig != null) {
+			// 是否更新缓存
 			doUpdate(context, updateAnnoConfig);
 		}
 
@@ -145,14 +149,17 @@ public class CacheHandler implements InvocationHandler {
 	}
 
 	private static void doInvalidate(CacheInvokeContext context, CacheInvalidateAnnoConfig annoConfig) {
+		// 获取对应的缓存实例
 		Cache cache = context.getCacheFunction().apply(context, annoConfig);
 		if (cache == null) {
 			return;
 		}
+		// 表达式结果
 		boolean condition = ExpressionUtil.evalCondition(context, annoConfig);
 		if (!condition) {
 			return;
 		}
+		// 生成缓存 key
 		Object key = ExpressionUtil.evalKey(context, annoConfig);
 		if (key == null) {
 			return;
@@ -177,10 +184,12 @@ public class CacheHandler implements InvocationHandler {
 		if (cache == null) {
 			return;
 		}
+		// 表达式结果
 		boolean condition = ExpressionUtil.evalCondition(context, updateAnnoConfig);
 		if (!condition) {
 			return;
 		}
+		// 生成缓存 key
 		Object key = ExpressionUtil.evalKey(context, updateAnnoConfig);
 		Object value = ExpressionUtil.evalValue(context, updateAnnoConfig);
 		if (key == null || value == ExpressionUtil.EVAL_FAILED) {
@@ -224,31 +233,38 @@ public class CacheHandler implements InvocationHandler {
 	}
 
 	private static Object invokeWithCached(CacheInvokeContext context) throws Throwable {
-		// 获取上下文中该方法的的注解详情
+		// 获取缓存实例配置
 		CacheInvokeConfig cic = context.getCacheInvokeConfig();
-		// 获取cachedAnnoConfig配置信息，其中包含@Cached和@CacheRefresh注解信息
+		// 获取注解配置信息
 		CachedAnnoConfig cac = cic.getCachedAnnoConfig();
-		// 之前在JetCacheInterceptor时createCacheInvokeContext(cacheConfigMap)创建CacheInvokeContext时定义了CacheFunction
-		// 所以这里apply()会执行定义的BiFunction的方法
-		// 获取到对应的Cache对象
+		// 获取缓存实例对象（不存在则会创建并设置到 cac 中）
+		// 可在 JetCacheInterceptor 创建本次调用的上下文时，调用 createCacheInvokeContext(cacheConfigMap) 方法中查看详情
 		Cache cache = context.getCacheFunction().apply(context, cac);
 		if (cache == null) {
 			logger.error("no cache with name: " + context.getMethod());
-			// 无缓存,执行原有方法
+			// 无缓存实例对象，执行原有方法
 			return invokeOrigin(context);
 		}
 
-		// 生成对应的缓存键
+		// 生成缓存 Key 对象（注解中没有配置的话就是入参，没有入参则为 "_$JETCACHE_NULL_KEY$_" ）
 		Object key = ExpressionUtil.evalKey(context, cic.getCachedAnnoConfig());
 		if (key == null) {
+			 // 生成缓存 Key 失败则执行原方法，并记录 CacheLoadEvent 事件
 			return loadAndCount(context, cache, key);
 		}
 
+		/*
+		 * 根据配置的 condition 来决定是否走缓存
+		 * 缓存注解中没有配置 condition 表示所有请求都走缓存
+		 * 配置了 condition 表示满足条件的才走缓存
+		 */
 		if (!ExpressionUtil.evalCondition(context, cic.getCachedAnnoConfig())) {
+			// 不满足 condition 则直接执行原方法，并记录 CacheLoadEvent 事件
 			return loadAndCount(context, cache, key);
 		}
 
 		try {
+			// 创建一个执行原有方法的函数
 			CacheLoader loader = new CacheLoader() {
 				@Override
 				public Object load(Object k) throws Throwable {
@@ -259,6 +275,7 @@ public class CacheHandler implements InvocationHandler {
 
 				@Override
 				public boolean vetoCacheUpdate() {
+					// 本次执行原方法后是否需要更新缓存
 					return !ExpressionUtil.evalPostCondition(context, cic.getCachedAnnoConfig());
 				}
 			};
@@ -275,10 +292,12 @@ public class CacheHandler implements InvocationHandler {
 		Object v = null;
 		boolean success = false;
 		try {
+			// 调用原有方法
 			v = invokeOrigin(context);
 			success = true;
 		} finally {
 			t = System.currentTimeMillis() - t;
+			// 发送 CacheLoadEvent 事件
 			CacheLoadEvent event = new CacheLoadEvent(cache, t, key, v, success);
 			while (cache instanceof ProxyCache) {
 				cache = ((ProxyCache) cache).getTargetCache();
@@ -291,6 +310,7 @@ public class CacheHandler implements InvocationHandler {
 	}
 
 	private static Object invokeOrigin(CacheInvokeContext context) throws Throwable {
+		// 执行被拦截的方法
 		return context.getInvoker().invoke();
 	}
 

@@ -9,13 +9,19 @@ import java.io.Serializable;
  */
 public final class CacheValueHolder<V> implements Serializable {
     private static final long serialVersionUID = -7973743507831565203L;
+    /**
+     * 缓存数据
+     */
     private V value;
+    /**
+     * 失效时间戳
+     */
     private long expireTime;
+    /**
+     * 第一次访问的时间
+     */
     private long accessTime;
 
-    /**
-     * used by kyro
-     */
     public CacheValueHolder() {
     }
 

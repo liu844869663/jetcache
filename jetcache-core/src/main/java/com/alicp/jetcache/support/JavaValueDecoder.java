@@ -21,6 +21,7 @@ public class JavaValueDecoder extends AbstractValueDecoder {
     public Object doApply(byte[] buffer) throws Exception {
         ByteArrayInputStream in;
         if (useIdentityNumber) {
+            // 获取缓存数据，去除前四个数组
             in = new ByteArrayInputStream(buffer, 4, buffer.length - 4);
         } else {
             in = new ByteArrayInputStream(buffer);

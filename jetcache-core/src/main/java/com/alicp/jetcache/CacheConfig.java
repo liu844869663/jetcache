@@ -13,22 +13,44 @@ import java.util.function.Function;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class CacheConfig<K, V> implements Cloneable {
+    /**
+     * 缓存有效时间
+     */
     private long expireAfterWriteInMillis = CacheConsts.DEFAULT_EXPIRE * 1000L;
+    /**
+     * 缓存在访问后多久失效
+     */
     private long expireAfterAccessInMillis = 0;
+    /**
+     * Key 转换函数
+     */
     private Function<K, Object> keyConvertor;
 
     private CacheLoader<K, V> loader;
 
     private List<CacheMonitor> monitors = new ArrayList<>();
 
+    /**
+     * 是否缓存 null 值
+     */
     private boolean cacheNullValue = false;
 
+    /**
+     * 刷新策略
+     */
     private RefreshPolicy refreshPolicy;
 
+    /**
+     * 尝试释放分布式锁的次数
+     */
     private int tryLockUnlockCount = 2;
-
+    /**
+     * 尝试获取分布式锁出现异常允许访问的次数
+     */
     private int tryLockInquiryCount = 1;
-
+    /**
+     * 尝试获取分布式锁的次数
+     */
     private int tryLockLockCount = 2;
 
     private boolean cachePenetrationProtect = false;

@@ -20,9 +20,13 @@ public class CacheAdvisor extends AbstractBeanFactoryPointcutAdvisor {
 
     private String[] basePackages;
 
+    /**
+     * 生成切入点
+     *
+     * @return 切入点
+     */
     @Override
     public Pointcut getPointcut() {
-    	// 初始化切入点
         CachePointcut pointcut = new CachePointcut(basePackages);
         pointcut.setCacheConfigMap(cacheConfigMap);
         return pointcut;

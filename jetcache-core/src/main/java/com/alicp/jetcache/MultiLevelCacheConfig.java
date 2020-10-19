@@ -10,6 +10,9 @@ import java.util.List;
  */
 public class MultiLevelCacheConfig<K, V> extends CacheConfig<K, V> {
     private List<Cache<K, V>> caches = new ArrayList<>();
+    /**
+     * 两级缓存时，本地缓存是否单独设置过期时间
+     */
     private boolean useExpireOfSubCache;
 
     @Override

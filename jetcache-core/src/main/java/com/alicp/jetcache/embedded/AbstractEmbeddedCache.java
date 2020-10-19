@@ -18,6 +18,9 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractEmbeddedCache<K, V> extends AbstractCache<K, V> {
     protected EmbeddedCacheConfig<K, V> config;
+    /**
+     * 本地缓存的 Map
+     */
     protected InnerMap innerMap;
 
     protected abstract InnerMap createAreaCache();
@@ -63,6 +66,7 @@ public abstract class AbstractEmbeddedCache<K, V> extends AbstractCache<K, V> {
                         return CacheGetResult.EXPIRED_WITHOUT_MSG;
                     }
                 }
+                // 设置该缓存数据的最后一次访问时间
                 holder.setAccessTime(now);
             }
 

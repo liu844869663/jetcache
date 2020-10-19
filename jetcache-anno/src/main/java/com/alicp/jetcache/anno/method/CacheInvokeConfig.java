@@ -13,8 +13,17 @@ import java.util.List;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class CacheInvokeConfig {
+    /**
+     * 方法的缓存配置
+     */
     private CachedAnnoConfig cachedAnnoConfig;
+    /**
+     * 方法的缓存失效策略集合
+     */
     private List<CacheInvalidateAnnoConfig> invalidateAnnoConfigs;
+    /**
+     * 方法的更新策略
+     */
     private CacheUpdateAnnoConfig updateAnnoConfig;
     private boolean enableCacheContext;
 

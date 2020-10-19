@@ -18,6 +18,9 @@ public class RedisLettuceCacheBuilder<T extends ExternalCacheBuilder<T>> extends
     }
 
     protected RedisLettuceCacheBuilder() {
+        /*
+         * 生成一个构建 RedisLettuceCache 缓存实例的函数
+         */
         buildFunc(config -> new RedisLettuceCache((RedisLettuceCacheConfig) config));
     }
 

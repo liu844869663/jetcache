@@ -14,32 +14,32 @@ import java.util.Map;
 public class GlobalCacheConfig {
 
 	/**
-	 * 需要隐藏的包名
+	 * 生成缓存实例名称需要截取的包名
 	 */
 	private String[] hiddenPackages;
 	/**
-	 * 统计时间单位(min)
+	 * 统计时间间隔
 	 */
 	protected int statIntervalMinutes;
 	/**
-	 * area名称是否作为缓存key的前缀(默认true,为了兼容老版本)
+	 * 缓存区域 area 是否作为缓存实例名称的前缀（默认true，为了兼容老版本）
 	 */
 	private boolean areaInCacheName = true;
 	
 	/**
-	 * 当缓存未命中的时候，是否一个JVM里面只有一个线程去执行方法，其它线程等待结果
+	 * 是否开启保护模式（缓存未命中，同一个JVM里面是否只允许一个线程去执行原方法，其它线程等待结果）
 	 */
 	private boolean penetrationProtect = false;
 	/**
-	 * 开启方法缓存
+	 * 是否开启缓存
 	 */
 	private boolean enableMethodCache = true;
 	/**
-	 * 保存本地缓存CacheBuilder
+	 * 保存本地缓存 CacheBuilder 构造器
 	 */
 	private Map<String, CacheBuilder> localCacheBuilders;
 	/**
-	 * 保存远程缓存CacheBuilder
+	 * 保存远程缓存 CacheBuilder 构造器
 	 */
 	private Map<String, CacheBuilder> remoteCacheBuilders;
 

@@ -93,7 +93,7 @@ public class DefaultCacheMonitor implements CacheMonitor {
             case SUCCESS: // 命中
                 cacheStat.getHitCount++;
                 break;
-            case NOT_EXISTS: // 为命中
+            case NOT_EXISTS: // 未命中
                 cacheStat.getMissCount++;
                 break;
             case EXPIRED: // 已过期

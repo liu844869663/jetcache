@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Created on 2016/11/16.
- *
  */
 public class ConfigSelector extends AdviceModeImportSelector<EnableMethodCache> {
 
@@ -17,6 +16,7 @@ public class ConfigSelector extends AdviceModeImportSelector<EnableMethodCache> 
     public String[] selectImports(AdviceMode adviceMode) {
         switch (adviceMode) {
             case PROXY:
+                // 返回的类型会被解析成 @Configuration 注解的对应
                 return getProxyImports();
             case ASPECTJ:
 //                return getAspectJImports();

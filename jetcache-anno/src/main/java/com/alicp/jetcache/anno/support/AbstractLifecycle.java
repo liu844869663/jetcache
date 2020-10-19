@@ -10,6 +10,9 @@ import javax.annotation.PreDestroy;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 class AbstractLifecycle {
+    /**
+     * 是否初始化
+     */
     private boolean inited;
 
     @PostConstruct

@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 向 Spring 容器添加一个 BeanPostProcessor
+ * 用于如果bean内部存在添加了 @CreateCache 注解的字段，注入该字段时会被解析成 LazyInitCache
+ *
  * Created on 2016/12/9.
  *
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
@@ -128,6 +131,8 @@ public class CreateCacheAnnotationBeanPostProcessor extends AutowiredAnnotationB
             final LinkedList<InjectionMetadata.InjectedElement> currElements =
                     new LinkedList<InjectionMetadata.InjectedElement>();
 
+            // 如果该对象存在 @CreateCache 注解的字段，注入该字段时会注入一个 LazyInitCache
+            // 后续尝试获取缓存实例，如果不存在则创建一个相应的缓存实例
             doWithLocalFields(targetClass, new ReflectionUtils.FieldCallback() {
                 @Override
                 public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {

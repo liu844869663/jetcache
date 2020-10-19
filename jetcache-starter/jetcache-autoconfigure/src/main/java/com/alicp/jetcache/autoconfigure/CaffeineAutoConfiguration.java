@@ -19,12 +19,15 @@ public class CaffeineAutoConfiguration extends EmbeddedCacheAutoInit {
 
     @Override
     protected CacheBuilder initCache(ConfigTree ct, String cacheAreaWithPrefix) {
+        // 创建一个 CaffeineCacheBuilder 构造器
         CaffeineCacheBuilder builder = CaffeineCacheBuilder.createCaffeineCacheBuilder();
+        // 解析相关配置至 CaffeineCacheBuilder 的 CacheConfig 中
         parseGeneralConfig(builder, ct);
         return builder;
     }
 
     public static class CaffeineCondition extends JetCacheCondition {
+        // 配置了缓存类型为 caffeine 当前类才会被注入 Spring 容器
         public CaffeineCondition() {
             super("caffeine");
         }

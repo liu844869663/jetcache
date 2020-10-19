@@ -31,6 +31,10 @@ public class LettuceConnectionManager {
 
     private static final LettuceConnectionManager defaultManager = new LettuceConnectionManager();
 
+    /**
+     * 用于存放 RedisClient 与 LettuceObjects的关系
+     * 用于缓存 RedisClient 的连接信息
+     */
     private Map<AbstractRedisClient, LettuceObjects> map = Collections.synchronizedMap(new WeakHashMap());
 
     private LettuceConnectionManager() {
@@ -56,6 +60,12 @@ public class LettuceConnectionManager {
         });
     }
 
+    /**
+     * 尝试获取 redisClient 对应的 LettuceObjects，其中封装了连接信息，然后返回与redis的连接
+     *
+     * @param redisClient Redis客户端
+     * @return 连接
+     */
     public StatefulConnection connection(AbstractRedisClient redisClient) {
         LettuceObjects lo = getLettuceObjectsFromMap(redisClient);
         if (lo.connection == null) {
@@ -70,8 +80,16 @@ public class LettuceConnectionManager {
         return lo.connection;
     }
 
+    /**
+     * 尝试获取 redisClient 对应的同步命令
+     *
+     * @param redisClient Redis客户端
+     * @return 同步命令
+     */
     public Object commands(AbstractRedisClient redisClient) {
+        // 如果 Redis 客户端没有创建连接，这里会初始化
         connection(redisClient);
+        // 获取封装的 Redis 客户端 LettuceObjects对象
         LettuceObjects lo = getLettuceObjectsFromMap(redisClient);
         if (lo.commands == null) {
             if (lo.connection instanceof StatefulRedisConnection) {
@@ -80,14 +98,19 @@ public class LettuceConnectionManager {
                 lo.commands = ((StatefulRedisClusterConnection) lo.connection).sync();
             } else if (lo.connection instanceof StatefulRedisSentinelConnection) {
                 lo.commands = ((StatefulRedisSentinelConnection) lo.connection).sync();
-            }else {
+            } else {
                 throw new CacheConfigException("type " + lo.connection.getClass() + " is not supported");
             }
         }
         return lo.commands;
     }
 
-
+    /**
+     * 尝试获取 redisClient 对应的异步命令
+     *
+     * @param redisClient Redis客户端
+     * @return 异步命令
+     */
     public Object asyncCommands(AbstractRedisClient redisClient) {
         connection(redisClient);
         LettuceObjects lo = getLettuceObjectsFromMap(redisClient);
@@ -105,6 +128,12 @@ public class LettuceConnectionManager {
         return lo.asyncCommands;
     }
 
+    /**
+     * 尝试获取 redisClient 对应的反应式编程命令
+     *
+     * @param redisClient Redis客户端
+     * @return 反应式编程命令
+     */
     public Object reactiveCommands(AbstractRedisClient redisClient) {
         connection(redisClient);
         LettuceObjects lo = getLettuceObjectsFromMap(redisClient);
@@ -122,6 +151,11 @@ public class LettuceConnectionManager {
         return lo.reactiveCommands;
     }
 
+    /**
+     * 释放 Redis 客户端
+     *
+     * @param redisClient Redis客户端
+     */
     public void removeAndClose(AbstractRedisClient redisClient) {
         LettuceObjects lo = (LettuceObjects) map.remove(redisClient);
         if (lo == null) {

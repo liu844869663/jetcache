@@ -42,6 +42,7 @@ public class RedisAutoConfiguration {
     }
 
     public static class RedisCondition extends JetCacheCondition {
+        // 配置了缓存类型为 redis 当前类才会被注入 Spring 容器
         public RedisCondition() {
             super("redis");
         }
@@ -49,6 +50,7 @@ public class RedisAutoConfiguration {
 
     public static class RedisAutoInit extends ExternalCacheAutoInit {
         public RedisAutoInit() {
+            // 设置缓存类型
             super("redis");
         }
 
@@ -60,9 +62,12 @@ public class RedisAutoConfiguration {
             Pool jedisPool = parsePool(ct);
             Pool[] slavesPool = null;
             int[] slavesPoolWeights = null;
+            // 是否只从 Redis 的从节点读取数据
             boolean readFromSlave = Boolean.parseBoolean(ct.getProperty("readFromSlave", "False"));
+            // 获取从节点的配置信息
             ConfigTree slaves = ct.subTree("slaves.");
             Set<String> slaveNames = slaves.directChildrenKeys();
+            // 依次创建每个从节点的连接池
             if (slaveNames.size() > 0) {
                 slavesPool = new Pool[slaveNames.size()];
                 slavesPoolWeights = new int[slaveNames.size()];
@@ -75,12 +80,14 @@ public class RedisAutoConfiguration {
                 }
             }
 
+            // 创建一个 RedisCacheBuilder 构造器
             ExternalCacheBuilder externalCacheBuilder = RedisCacheBuilder.createRedisCacheBuilder()
                     .jedisPool(jedisPool)
                     .readFromSlave(readFromSlave)
                     .jedisSlavePools(slavesPool)
                     .slaveReadWeights(slavesPoolWeights);
 
+            // 解析相关配置至 RedisCacheBuilder 的 CacheConfig 中
             parseGeneralConfig(externalCacheBuilder, ct);
 
             // eg: "jedisPool.remote.default"
@@ -89,7 +96,14 @@ public class RedisAutoConfiguration {
             return externalCacheBuilder;
         }
 
+        /**
+         * 创建 Redis 连接池
+         *
+         * @param ct 配置信息
+         * @return 连接池
+         */
         private Pool<Jedis> parsePool(ConfigTree ct) {
+            // 创建连接池配置对象
             GenericObjectPoolConfig poolConfig = parsePoolConfig(ct);
 
             String host = ct.getProperty("host", (String) null);
@@ -109,6 +123,7 @@ public class RedisAutoConfiguration {
                 if (port == 0) {
                     throw new IllegalStateException("host/port or sentinels/masterName is required");
                 }
+                // 创建一个 Jedis 连接池
                 jedisPool = new JedisPool(poolConfig, host, port, timeout, password, database, clientName, ssl);
             } else {
                 Objects.requireNonNull(masterName, "host/port or sentinels/masterName is required");
@@ -119,6 +134,7 @@ public class RedisAutoConfiguration {
                         sentinelsSet.add(s.trim());
                     }
                 }
+                // 创建一个 Jedis Sentine 连接池
                 jedisPool = new JedisSentinelPool(masterName, sentinelsSet, poolConfig, timeout, password, database, clientName);
             }
             return jedisPool;

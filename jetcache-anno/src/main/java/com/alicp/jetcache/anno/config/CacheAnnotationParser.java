@@ -32,22 +32,35 @@ public class CacheAnnotationParser implements BeanDefinitionParser {
     }
 
     private synchronized void doParse(Element element, ParserContext parserContext) {
+        // 获取标签中 base-package
         String[] basePackages = StringUtils.tokenizeToStringArray(element.getAttribute("base-package"), ",; \t\n");
         AopNamespaceUtils.registerAutoProxyCreatorIfNecessary(parserContext, element);
+        /*
+         * 目的是注入一个 Advisor
+         */
         if (!parserContext.getRegistry().containsBeanDefinition(CacheAdvisor.CACHE_ADVISOR_BEAN_NAME)) {
             Object eleSource = parserContext.extractSource(element);
 
+            /*
+             * 定义 ConfigMap，并注册 BeanDefinition
+             */
             RootBeanDefinition configMapDef = new RootBeanDefinition(ConfigMap.class);
             configMapDef.setSource(eleSource);
             configMapDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
             String configMapName = parserContext.getReaderContext().registerWithGeneratedName(configMapDef);
 
+            /*
+             * 定义 JetCacheInterceptor，并注册 BeanDefinition
+             */
             RootBeanDefinition interceptorDef = new RootBeanDefinition(JetCacheInterceptor.class);
             interceptorDef.setSource(eleSource);
             interceptorDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
             interceptorDef.getPropertyValues().addPropertyValue(new PropertyValue("cacheConfigMap", new RuntimeBeanReference(configMapName)));
             String interceptorName = parserContext.getReaderContext().registerWithGeneratedName(interceptorDef);
 
+            /*
+             * 定义 CacheAdvisor，并注册 BeanDefinition
+             */
             RootBeanDefinition advisorDef = new RootBeanDefinition(CacheAdvisor.class);
             advisorDef.setSource(eleSource);
             advisorDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
@@ -56,8 +69,7 @@ public class CacheAnnotationParser implements BeanDefinitionParser {
             advisorDef.getPropertyValues().addPropertyValue(new PropertyValue("basePackages", basePackages));
             parserContext.getRegistry().registerBeanDefinition(CacheAdvisor.CACHE_ADVISOR_BEAN_NAME, advisorDef);
 
-            CompositeComponentDefinition compositeDef = new CompositeComponentDefinition(element.getTagName(),
-                    eleSource);
+            CompositeComponentDefinition compositeDef = new CompositeComponentDefinition(element.getTagName(), eleSource);
             compositeDef.addNestedComponent(new BeanComponentDefinition(configMapDef, configMapName));
             compositeDef.addNestedComponent(new BeanComponentDefinition(interceptorDef, interceptorName));
             compositeDef.addNestedComponent(new BeanComponentDefinition(advisorDef, CacheAdvisor.CACHE_ADVISOR_BEAN_NAME));

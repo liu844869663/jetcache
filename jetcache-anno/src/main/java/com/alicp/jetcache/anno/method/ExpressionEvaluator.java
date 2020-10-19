@@ -29,8 +29,11 @@ public class ExpressionEvaluator implements Function<Object, Object> {
     private Function<Object, Object> target;
 
     public ExpressionEvaluator(String script, Method defineMethod) {
+        // 解析表达式
         Object rt[] = parseEL(script);
+        // 表达式类型
         EL el = (EL) rt[0];
+        // 解析后的表达式
         String realScript = (String) rt[1];
         if (el == EL.MVEL) {
             target = new MvelEvaluator(realScript);

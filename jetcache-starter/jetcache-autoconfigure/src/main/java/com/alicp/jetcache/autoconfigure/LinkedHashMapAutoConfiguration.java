@@ -19,12 +19,15 @@ public class LinkedHashMapAutoConfiguration extends EmbeddedCacheAutoInit {
 
     @Override
     protected CacheBuilder initCache(ConfigTree ct, String cacheAreaWithPrefix) {
+        // 创建一个 LinkedHashMapCacheBuilder 构造器
         LinkedHashMapCacheBuilder builder = LinkedHashMapCacheBuilder.createLinkedHashMapCacheBuilder();
+        // 解析相关配置至 LinkedHashMapCacheBuilder 的 CacheConfig 中
         parseGeneralConfig(builder, ct);
         return builder;
     }
 
     public static class LinkedHashMapCondition extends JetCacheCondition {
+        // 配置了缓存类型为 linkedhashmap 当前类才会被注入 Spring 容器
         public LinkedHashMapCondition() {
             super("linkedhashmap");
         }

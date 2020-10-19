@@ -11,9 +11,21 @@ import redis.clients.jedis.util.Pool;
  */
 public class RedisCacheConfig<K, V> extends ExternalCacheConfig<K, V> {
 
+    /**
+     * Redis 连接池
+     */
     private Pool<Jedis> jedisPool;
+    /**
+     * Redis 从节点的连接池
+     */
     private Pool<Jedis>[] jedisSlavePools;
+    /**
+     * 是否只从 Redis 从节点读取数据
+     */
     private boolean readFromSlave;
+    /**
+     * Redis 从节点的权重
+     */
     private int[] slaveReadWeights;
 
     public Pool<Jedis> getJedisPool() {

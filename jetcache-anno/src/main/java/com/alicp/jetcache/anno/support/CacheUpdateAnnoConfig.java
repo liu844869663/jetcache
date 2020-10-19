@@ -11,6 +11,9 @@ import java.util.function.Function;
 public class CacheUpdateAnnoConfig extends CacheAnnoConfig {
 
     private String value;
+    /**
+     * SpEL 计算出来的 Key 有多个，是否所有 Key 的缓存都更新
+     */
     private boolean multi;
 
     private Function<Object, Object> valueEvaluator;

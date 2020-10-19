@@ -12,14 +12,35 @@ import java.util.function.Function;
  * @author <a href="mailto:areyouok@gmail.com">huangli</a>
  */
 public class CacheAnnoConfig {
+    /**
+     * 缓存区域，默认 default
+     */
     private String area;
+    /**
+     * 缓存的名称
+     */
     private String name;
+    /**
+     * 生成缓存 Key 的 SpEL 表达式
+     */
     private String key;
+    /**
+     * 使用SpEL指定条件，如果表达式返回true的时候才去缓存中查询
+     */
     private String condition;
 
     private Function<Object, Boolean> conditionEvaluator;
+    /**
+     * 每个缓存实例对象生成缓存 Key 的函数
+     */
     private Function<Object, Object> keyEvaluator;
+    /**
+     * 对应的缓存实例
+     */
     private Cache<?, ?> cache;
+    /**
+     * 缓存的方法
+     */
     private Method defineMethod;
 
     public String getArea() {

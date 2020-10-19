@@ -14,19 +14,55 @@ import java.util.function.Function;
  */
 public class CachedAnnoConfig extends CacheAnnoConfig {
 
+    /**
+     * 是否开启缓存
+     */
     private boolean enabled;
+    /**
+     * 时间单位
+     */
     private TimeUnit timeUnit;
+    /**
+     * 缓存时长
+     */
     private long expire;
+    /**
+     * 本地缓存时长（仅当 cacheType 为 BOTH 时适用，通常小于 expire）
+     */
     private long localExpire;
+    /**
+     * 缓存类型（REMOTE, LOCAL, BOTH）
+     */
     private CacheType cacheType;
+    /**
+     * 本地缓存的最大元素数量
+     */
     private int localLimit;
+    /**
+     * 是否缓存 null 值，默认 false
+     */
     private boolean cacheNullValue;
+    /**
+     * 远程缓存的序列化方式（可选值为 SerialPolicy.JAVA 和 SerialPolicy.KRYO，默认 JAVA）
+     */
     private String serialPolicy;
+    /**
+     * KEY的转换方式（可选值为  KeyConvertor.FASTJSON 和 KeyConvertor.NONE）
+     */
     private String keyConvertor;
+    /**
+     * 使用SpEL指定条件，如果表达式返回true的时候才更新缓存，该评估在方法执行后进行，因此可以访问到#result
+     */
     private String postCondition;
 
     private Function<Object, Boolean> postConditionEvaluator;
+    /**
+     * 刷新策略
+     */
     private RefreshPolicy refreshPolicy;
+    /**
+     * 缓存访问未命中，保护策略
+     */
     private PenetrationProtectConfig penetrationProtectConfig;
 
     public boolean isEnabled() {

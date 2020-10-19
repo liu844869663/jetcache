@@ -25,21 +25,25 @@ public class DefaultCacheNameGenerator implements CacheNameGenerator {
 
     @Override
     public String generateCacheName(Method method, Object targetObject) {
+        // 获取缓存实例名称
         String cacheName = cacheNameMap.get(method);
 
         if (cacheName == null) {
             final StringBuilder sb = new StringBuilder();
 
             String className = method.getDeclaringClass().getName();
+            // 追加类名（如果包含需要隐藏的包名则去除）
             sb.append(ClassUtil.getShortClassName(removeHiddenPackage(hiddenPackages, className)));
             sb.append('.');
+            // 追加方法名
             sb.append(method.getName());
             sb.append('(');
-
+            /*
+             * 依次追加方法参数类型名称
+             */
             for(Class<?> c : method.getParameterTypes()){
                 getDescriptor(sb, c , hiddenPackages);
             }
-
             sb.append(')');
 
             String str = sb.toString();
